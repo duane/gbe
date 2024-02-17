@@ -3,11 +3,70 @@
 
 use std::fmt::Display;
 
+pub enum R16 {
+    BC,
+    DE,
+    HL,
+    SP,
+}
+
+impl R16 {
+    fn as_operand(&self) -> u8 {
+        match self {
+            R16::BC => 0b00,
+            R16::DE => 0b01,
+            R16::HL => 0b10,
+            R16::SP => 0b11,
+        }
+    }
+    fn from_operand(operand: u8) -> Self {
+        match operand {
+            0b00 => R16::BC,
+            0b01 => R16::DE,
+            0b10 => R16::HL,
+            0b11 => R16::SP,
+            _ => unimplemented!("R16::from_operand({:#04x})", operand),
+        }
+    }
+}
+
+impl Display for R16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            R16::BC => write!(f, "BC"),
+            R16::DE => write!(f, "DE"),
+            R16::HL => write!(f, "HL"),
+            R16::SP => write!(f, "SP"),
+        }
+    }
+}
+
 pub enum R16Mem {
     BC,
     DE,
     HLInc,
     HLDec,
+}
+
+impl R16Mem {
+    fn as_operand(&self) -> u8 {
+        match self {
+            R16Mem::BC => 0b00,
+            R16Mem::DE => 0b01,
+            R16Mem::HLInc => 0b10,
+            R16Mem::HLDec => 0b11,
+        }
+    }
+
+    fn from_operand(operand: u8) -> Self {
+        match operand {
+            0b00 => R16Mem::BC,
+            0b01 => R16Mem::DE,
+            0b10 => R16Mem::HLInc,
+            0b11 => R16Mem::HLDec,
+            _ => unimplemented!("R16Mem::from_operand({:#04x})", operand),
+        }
+    }
 }
 
 impl Display for R16Mem {
@@ -21,7 +80,7 @@ impl Display for R16Mem {
     }
 }
 
-pub enum LoadOperand {
+pub enum R8 {
     B,
     C,
     D,
@@ -32,224 +91,105 @@ pub enum LoadOperand {
     A,
 }
 
-impl Display for LoadOperand {
+impl Display for R8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoadOperand::B => write!(f, "B"),
-            LoadOperand::C => write!(f, "C"),
-            LoadOperand::D => write!(f, "D"),
-            LoadOperand::E => write!(f, "E"),
-            LoadOperand::H => write!(f, "H"),
-            LoadOperand::L => write!(f, "L"),
-            LoadOperand::HLRef => write!(f, "(HL)"),
-            LoadOperand::A => write!(f, "A"),
+            R8::B => write!(f, "B"),
+            R8::C => write!(f, "C"),
+            R8::D => write!(f, "D"),
+            R8::E => write!(f, "E"),
+            R8::H => write!(f, "H"),
+            R8::L => write!(f, "L"),
+            R8::HLRef => write!(f, "(HL)"),
+            R8::A => write!(f, "A"),
         }
     }
 }
 
-impl LoadOperand {
+impl R8 {
     fn as_operand(&self) -> u8 {
         match self {
-            LoadOperand::B => 0b000,
-            LoadOperand::C => 0b001,
-            LoadOperand::D => 0b010,
-            LoadOperand::E => 0b011,
-            LoadOperand::H => 0b100,
-            LoadOperand::L => 0b101,
-            LoadOperand::HLRef => 0b110,
-            LoadOperand::A => 0b111,
+            R8::B => 0b000,
+            R8::C => 0b001,
+            R8::D => 0b010,
+            R8::E => 0b011,
+            R8::H => 0b100,
+            R8::L => 0b101,
+            R8::HLRef => 0b110,
+            R8::A => 0b111,
         }
     }
 
     fn from_operand(operand: u8) -> Self {
         match operand {
-            0b000 => LoadOperand::B,
-            0b001 => LoadOperand::C,
-            0b010 => LoadOperand::D,
-            0b011 => LoadOperand::E,
-            0b100 => LoadOperand::H,
-            0b101 => LoadOperand::L,
-            0b110 => LoadOperand::HLRef,
-            0b111 => LoadOperand::A,
+            0b000 => R8::B,
+            0b001 => R8::C,
+            0b010 => R8::D,
+            0b011 => R8::E,
+            0b100 => R8::H,
+            0b101 => R8::L,
+            0b110 => R8::HLRef,
+            0b111 => R8::A,
             _ => unimplemented!("LoadOperand::from_operand({:#04x})", operand),
         }
     }
 }
 
-pub enum LoadTarget16 {
-    HL,
-    SP,
-}
-
-impl Display for LoadTarget16 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LoadTarget16::HL => write!(f, "HL"),
-            LoadTarget16::SP => write!(f, "SP"),
-        }
-    }
-}
-
-pub enum LoadTarget8 {
-    A,
-}
-
-impl Display for LoadTarget8 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LoadTarget8::A => write!(f, "A"),
-        }
-    }
-}
-
-pub enum LoadSource {
-    Imm8(u8),
-    Imm16(u16),
-}
-
-impl Display for LoadSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LoadSource::Imm8(val) => write!(f, "{:#04x}", val),
-            LoadSource::Imm16(val) => write!(f, "{:#08x}", val),
-        }
-    }
-}
-
-pub enum StoreSource {
-    A,
-}
-
-impl Display for StoreSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StoreSource::A => write!(f, "A"),
-        }
-    }
-}
-
-pub enum StackOperand {
+pub enum R16Stack {
     BC,
     DE,
     HL,
     AF,
 }
 
-impl StackOperand {
+impl R16Stack {
     fn as_operand(&self) -> u8 {
         match self {
-            StackOperand::BC => 0b00,
-            StackOperand::DE => 0b01,
-            StackOperand::HL => 0b10,
-            StackOperand::AF => 0b11,
+            R16Stack::BC => 0b00,
+            R16Stack::DE => 0b01,
+            R16Stack::HL => 0b10,
+            R16Stack::AF => 0b11,
         }
     }
 }
 
-impl Display for StackOperand {
+impl Display for R16Stack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StackOperand::BC => write!(f, "BC"),
-            StackOperand::DE => write!(f, "DE"),
-            StackOperand::HL => write!(f, "HL"),
-            StackOperand::AF => write!(f, "AF"),
+            R16Stack::BC => write!(f, "BC"),
+            R16Stack::DE => write!(f, "DE"),
+            R16Stack::HL => write!(f, "HL"),
+            R16Stack::AF => write!(f, "AF"),
         }
     }
 }
 
-pub enum Conditions {
+pub enum Condition {
     NZ,
     Z,
     NC,
     C,
 }
 
-impl Display for Conditions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Conditions::NZ => write!(f, "NZ"),
-            Conditions::Z => write!(f, "Z"),
-            Conditions::NC => write!(f, "NC"),
-            Conditions::C => write!(f, "C"),
-        }
-    }
-}
-
-pub enum XORSource {
-    A,
-}
-
-pub enum XORTarget {
-    A,
-}
-
-pub struct N8 {
-    pub val: Option<u8>,
-}
-
-pub enum ALUTarget {
-    A,
-}
-
-impl Display for ALUTarget {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ALUTarget::A => write!(f, "A"),
-        }
-    }
-}
-
-pub enum ALUOperand {
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    HLRef, // (HL)
-    A,
-}
-
-impl Display for ALUOperand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ALUOperand::B => write!(f, "B"),
-            ALUOperand::C => write!(f, "C"),
-            ALUOperand::D => write!(f, "D"),
-            ALUOperand::E => write!(f, "E"),
-            ALUOperand::H => write!(f, "H"),
-            ALUOperand::L => write!(f, "L"),
-            ALUOperand::HLRef => write!(f, "(HL)"),
-            ALUOperand::A => write!(f, "A"),
-        }
-    }
-}
-
-impl ALUOperand {
-    fn as_operand(&self) -> u8 {
-        match self {
-            ALUOperand::B => 0b000,
-            ALUOperand::C => 0b001,
-            ALUOperand::D => 0b010,
-            ALUOperand::E => 0b011,
-            ALUOperand::H => 0b100,
-            ALUOperand::L => 0b101,
-            ALUOperand::HLRef => 0b110,
-            ALUOperand::A => 0b111,
-        }
-    }
-
+impl Condition {
     fn from_operand(operand: u8) -> Self {
         match operand {
-            0b000 => ALUOperand::B,
-            0b001 => ALUOperand::C,
-            0b010 => ALUOperand::D,
-            0b011 => ALUOperand::E,
-            0b100 => ALUOperand::H,
-            0b101 => ALUOperand::L,
-            0b110 => ALUOperand::HLRef,
-            0b111 => ALUOperand::A,
-            _ => unimplemented!("ALUOperand::from_operand({:#04x})", operand),
+            0b00 => Condition::NZ,
+            0b01 => Condition::Z,
+            0b10 => Condition::NC,
+            0b11 => Condition::C,
+            _ => unimplemented!("Conditions::from_operand({:#04x})", operand),
+        }
+    }
+}
+
+impl Display for Condition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Condition::NZ => write!(f, "NZ"),
+            Condition::Z => write!(f, "Z"),
+            Condition::NC => write!(f, "NC"),
+            Condition::C => write!(f, "C"),
         }
     }
 }
@@ -260,25 +200,33 @@ pub enum Instruction {
     Stop(u8),
 
     Call(u16),
-    JR(i8, Option<Conditions>),
-    Ret(Option<Conditions>),
+    JR(i8, Option<Condition>),
+    Ret(Option<Condition>),
 
-    Load16Imm(LoadTarget16, u16),
+    Load16Imm(R16, u16),
     Load16Mem(R16Mem),
-    Load8Imm(LoadTarget8, u8),
-    Store8H(u16, StoreSource),
-    Load8(LoadOperand, LoadOperand),
-    Push(StackOperand),
-    Pop(StackOperand),
+    Load8Imm(R8, u8),
+    Store8(R16Mem),
+    Store8H(u16),
+    StoreSP(u16),
+    Load8(R8, R8),
+    Push(R16Stack),
+    Pop(R16Stack),
 
-    ADD(ALUTarget, ALUOperand),
-    ADC(ALUTarget, ALUOperand),
-    SUB(ALUTarget, ALUOperand),
-    SBC(ALUTarget, ALUOperand),
-    AND(ALUTarget, ALUOperand),
-    XOR(ALUTarget, ALUOperand),
-    OR(ALUTarget, ALUOperand),
-    CP(ALUTarget, ALUOperand),
+    INC16(R16),
+    INC8(R8),
+
+    DEC16(R16),
+    DEC8(R8),
+
+    ADD(R8),
+    ADC(R8),
+    SUB(R8),
+    SBC(R8),
+    AND(R8),
+    XOR(R8),
+    OR(R8),
+    CP(R8),
 }
 
 impl Display for Instruction {
@@ -291,7 +239,9 @@ impl Display for Instruction {
             Instruction::Load16Mem(mem) => write!(f, "LD A, {}", mem),
             Instruction::Load8Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load8(target, source) => write!(f, "LD {}, {}", target, source),
-            Instruction::Store8H(addr, source) => write!(f, "LD [0x{:04x}], {}", addr, source),
+            Instruction::Store8(dest) => write!(f, "LD [{}], A", dest),
+            Instruction::Store8H(addr) => write!(f, "LDH [0x{:04x}], A", addr),
+            Instruction::StoreSP(addr) => write!(f, "LD {}, SP", addr),
             Instruction::Push(operand) => write!(f, "PUSH {}", operand),
             Instruction::Pop(operand) => write!(f, "POP {}", operand),
             Instruction::Call(addr) => write!(f, "CALL {:#08x}", addr),
@@ -312,31 +262,41 @@ impl Display for Instruction {
                     None => "".to_string(),
                 }
             ),
-            Instruction::ADD(target, source) => write!(f, "ADD {}, {}", target, source),
-            Instruction::ADC(target, source) => write!(f, "ADC {}, {}", target, source),
-            Instruction::SUB(target, source) => write!(f, "SUB {}, {}", target, source),
-            Instruction::SBC(target, source) => write!(f, "SBC {}, {}", target, source),
-            Instruction::AND(target, source) => write!(f, "AND {}, {}", target, source),
-            Instruction::XOR(target, source) => write!(f, "XOR {}, {}", target, source),
-            Instruction::OR(target, source) => write!(f, "OR {}, {}", target, source),
-            Instruction::CP(target, source) => write!(f, "CP {}, {}", target, source),
+            Instruction::INC16(r16) => write!(f, "INC {}", r16),
+            Instruction::INC8(r8) => write!(f, "INC {}", r8),
+            Instruction::DEC16(r16) => write!(f, "DEC {}", r16),
+            Instruction::DEC8(r8) => write!(f, "DEC {}", r8),
+
+            Instruction::ADD(source) => write!(f, "ADD A, {}", source),
+            Instruction::ADC(source) => write!(f, "ADC A, {}", source),
+            Instruction::SUB(source) => write!(f, "SUB A, {}", source),
+            Instruction::SBC(source) => write!(f, "SBC A, {}", source),
+            Instruction::AND(source) => write!(f, "AND A, {}", source),
+            Instruction::XOR(source) => write!(f, "XOR A, {}", source),
+            Instruction::OR(source) => write!(f, "OR A, {}", source),
+            Instruction::CP(source) => write!(f, "CP A, {}", source),
         }
     }
 }
 
 impl Instruction {
     pub fn size_header(insn: u8) -> u8 {
-        match insn >> 6 {
-            0b00 => match insn {
-                0 => 1,
-                0x10 => 2,
-                0x0a | 0x1a | 0x2a | 0x3a => 1,
-                0x18 | 0x20 | 0x28 | 0x30 | 0x38 => 2, // jr
-                0x11 => 3,
-                0x21 => 3,
-                0x31 => 3,
-                0x3e => 2,
-                _ => unimplemented!("Instruction::size({:#02x})", insn),
+        let size = match insn >> 6 {
+            0b00 => match insn & 0x0F {
+                0x0 if insn == 0x0 => 1, // NOP
+                0x1 => 3,                // LD r16, imm16
+                0x2 => 1,                // LD [r16mem], A
+                0x3 => 1,                // INC r16
+                0x4 => 1,                // INC r8
+                0x5 => 1,                // DEC r8
+                0x8 if insn == 0x8 => 3, // LD [imm16], SP
+                0xa => 1,                // LD A, [r16mem]
+                0xb => 1,                // DEC r16
+                _ => match insn & 0x7 {
+                    0x0 => 2, // JR e8
+                    0x6 => 2, // LD r8, imm8
+                    _ => unimplemented!("Instruction::size({:#02x})", insn),
+                },
             },
             0b01 => 1,
             0b10 => 1,
@@ -349,7 +309,9 @@ impl Instruction {
                 _ => unimplemented!("Instruction::size({:#02x})", insn),
             },
             _ => unimplemented!("Instruction::size({:#02x})", insn),
-        }
+        };
+        // println!("size_header({:#02x}) = {}", insn, size);
+        size
     }
 
     pub fn encode(&self) -> Vec<u8> {
@@ -361,44 +323,41 @@ impl Instruction {
             Instruction::JR(offset, None) => vec![0x18, *offset as u8],
             Instruction::JR(offset, Some(cond)) => {
                 let cond = match cond {
-                    Conditions::NZ => 0b00,
-                    Conditions::Z => 0b01,
-                    Conditions::NC => 0b10,
-                    Conditions::C => 0b11,
+                    Condition::NZ => 0b00,
+                    Condition::Z => 0b01,
+                    Condition::NC => 0b10,
+                    Condition::C => 0b11,
                 };
                 vec![0x20 | cond << 3, *offset as u8]
             }
             Instruction::Ret(None) => vec![0xc9],
             Instruction::Ret(Some(cond)) => {
                 let cond = match cond {
-                    Conditions::NZ => 0b00,
-                    Conditions::Z => 0b01,
-                    Conditions::NC => 0b10,
-                    Conditions::C => 0b11,
+                    Condition::NZ => 0b00,
+                    Condition::Z => 0b01,
+                    Condition::NC => 0b10,
+                    Condition::C => 0b11,
                 };
                 vec![0xc0 | cond << 3]
             }
-
-            Instruction::Load16Imm(LoadTarget16::HL, val) => {
-                vec![0x21, *val as u8, (*val >> 8) as u8]
+            Instruction::Load16Imm(op, val) => {
+                vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
             }
-            Instruction::Load16Mem(mem) => match mem {
-                R16Mem::BC => vec![0x0a],
-                R16Mem::DE => vec![0x1a],
-                R16Mem::HLInc => vec![0x2a],
-                R16Mem::HLDec => vec![0x3a],
-            },
-            Instruction::Load16Imm(LoadTarget16::SP, val) => {
-                vec![0x31, *val as u8, (*val >> 8) as u8]
-            }
-            Instruction::Load8Imm(LoadTarget8::A, val) => {
-                vec![0x3e, *val]
+            Instruction::Load16Mem(mem) => vec![0xb | mem.as_operand() << 4],
+            Instruction::Load8Imm(dest, val) => {
+                vec![0x06 | dest.as_operand() << 3, *val]
             }
             Instruction::Load8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
-            Instruction::Store8H(addr, StoreSource::A) => {
+            Instruction::Store8(dest) => {
+                vec![0x3 | dest.as_operand() << 4]
+            }
+            Instruction::Store8H(addr) => {
                 vec![0xe0, (*addr & 0xff) as u8]
+            }
+            Instruction::StoreSP(imm16) => {
+                vec![0x08, *imm16 as u8, (*imm16 >> 8) as u8]
             }
             Instruction::Push(operand) => {
                 vec![operand.as_operand() << 4 | 0b11_000_101]
@@ -406,15 +365,27 @@ impl Instruction {
             Instruction::Pop(operand) => {
                 vec![operand.as_operand() << 4 | 0b11_000_001]
             }
+            Instruction::INC16(r16) => {
+                vec![0x3 | r16.as_operand() << 4]
+            }
+            Instruction::INC8(r8) => {
+                vec![0x4 | r8.as_operand() << 3]
+            }
+            Instruction::DEC16(r16) => {
+                vec![0xb | r16.as_operand() << 4]
+            }
+            Instruction::DEC8(r8) => {
+                vec![0x9 | r8.as_operand() << 3]
+            }
 
-            Instruction::ADD(ALUTarget::A, source) => vec![0b10_000_000 | source.as_operand()],
-            Instruction::ADC(ALUTarget::A, source) => vec![0b10_001_000 | source.as_operand()],
-            Instruction::SUB(ALUTarget::A, source) => vec![0b10_010_000 | source.as_operand()],
-            Instruction::SBC(ALUTarget::A, source) => vec![0b10_011_000 | source.as_operand()],
-            Instruction::AND(ALUTarget::A, source) => vec![0b10_100_000 | source.as_operand()],
-            Instruction::XOR(ALUTarget::A, source) => vec![0b10_101_000 | source.as_operand()],
-            Instruction::OR(ALUTarget::A, source) => vec![0b10_110_000 | source.as_operand()],
-            Instruction::CP(ALUTarget::A, source) => vec![0b10_111_000 | source.as_operand()],
+            Instruction::ADD(source) => vec![0b10_000_000 | source.as_operand()],
+            Instruction::ADC(source) => vec![0b10_001_000 | source.as_operand()],
+            Instruction::SUB(source) => vec![0b10_010_000 | source.as_operand()],
+            Instruction::SBC(source) => vec![0b10_011_000 | source.as_operand()],
+            Instruction::AND(source) => vec![0b10_100_000 | source.as_operand()],
+            Instruction::XOR(source) => vec![0b10_101_000 | source.as_operand()],
+            Instruction::OR(source) => vec![0b10_110_000 | source.as_operand()],
+            Instruction::CP(source) => vec![0b10_111_000 | source.as_operand()],
         }
     }
 
@@ -431,18 +402,25 @@ impl Instruction {
             Instruction::Load16Imm(_, _) => 3,
             Instruction::Load8Imm(_, _) => 2,
             Instruction::Load8(_, _) => 1,
-            Instruction::Store8H(_, _) => 2,
+            Instruction::Store8(_) => 1,
+            Instruction::Store8H(_) => 2,
+            Instruction::StoreSP(_) => 3,
             Instruction::Push(_) => 1,
             Instruction::Pop(_) => 1,
 
-            Instruction::ADD(_, _) => 1,
-            Instruction::ADC(_, _) => 1,
-            Instruction::SUB(_, _) => 1,
-            Instruction::SBC(_, _) => 1,
-            Instruction::AND(_, _) => 1,
-            Instruction::XOR(_, _) => 1,
-            Instruction::OR(_, _) => 1,
-            Instruction::CP(_, _) => 1,
+            Instruction::INC16(_) => 1,
+            Instruction::INC8(_) => 1,
+            Instruction::DEC16(_) => 1,
+            Instruction::DEC8(_) => 1,
+
+            Instruction::ADD(_) => 1,
+            Instruction::ADC(_) => 1,
+            Instruction::SUB(_) => 1,
+            Instruction::SBC(_) => 1,
+            Instruction::AND(_) => 1,
+            Instruction::XOR(_) => 1,
+            Instruction::OR(_) => 1,
+            Instruction::CP(_) => 1,
         }
     }
 
@@ -459,18 +437,25 @@ impl Instruction {
             Instruction::Load16Imm(_, _) => 7,
             Instruction::Load8Imm(_, _) => 4,
             Instruction::Load8(_, _) => 1,
-            Instruction::Store8H(_, _) => 4,
+            Instruction::Store8(_) => 1,
+            Instruction::Store8H(_) => 4,
+            Instruction::StoreSP(_) => 5,
             Instruction::Push(_) => 1,
             Instruction::Pop(_) => 1,
 
-            Instruction::ADD(_, _) => 1,
-            Instruction::ADC(_, _) => 1,
-            Instruction::SUB(_, _) => 1,
-            Instruction::SBC(_, _) => 1,
-            Instruction::AND(_, _) => 1,
-            Instruction::XOR(_, _) => 1,
-            Instruction::OR(_, _) => 1,
-            Instruction::CP(_, _) => 1,
+            Instruction::INC16(_) => 1,
+            Instruction::INC8(_) => 1,
+            Instruction::DEC16(_) => 1,
+            Instruction::DEC8(_) => 1,
+
+            Instruction::ADD(_) => 1,
+            Instruction::ADC(_) => 1,
+            Instruction::SUB(_) => 1,
+            Instruction::SBC(_) => 1,
+            Instruction::AND(_) => 1,
+            Instruction::XOR(_) => 1,
+            Instruction::OR(_) => 1,
+            Instruction::CP(_) => 1,
         }
     }
 
@@ -487,18 +472,25 @@ impl Instruction {
             Instruction::Load16Imm(_, _) => 12,
             Instruction::Load8Imm(_, _) => 8,
             Instruction::Load8(_, _) => 4,
-            Instruction::Store8H(_, _) => 12,
+            Instruction::Store8(_) => 1,
+            Instruction::Store8H(_) => 12,
+            Instruction::StoreSP(_) => 5,
             Instruction::Push(_) => 16,
             Instruction::Pop(_) => 16,
 
-            Instruction::ADD(_, _) => 4,
-            Instruction::ADC(_, _) => 4,
-            Instruction::SUB(_, _) => 4,
-            Instruction::SBC(_, _) => 4,
-            Instruction::AND(_, _) => 4,
-            Instruction::XOR(_, _) => 4,
-            Instruction::OR(_, _) => 4,
-            Instruction::CP(_, _) => 4,
+            Instruction::INC16(_) => 1,
+            Instruction::INC8(_) => 1,
+            Instruction::DEC16(_) => 1,
+            Instruction::DEC8(_) => 1,
+
+            Instruction::ADD(_) => 4,
+            Instruction::ADC(_) => 4,
+            Instruction::SUB(_) => 4,
+            Instruction::SBC(_) => 4,
+            Instruction::AND(_) => 4,
+            Instruction::XOR(_) => 4,
+            Instruction::OR(_) => 4,
+            Instruction::CP(_) => 4,
         }
     }
 
@@ -517,80 +509,75 @@ impl Instruction {
         let quad = byte >> 6;
         match quad & 0b11 {
             // load quadrant
-            0b00 => match byte {
-                0 => Instruction::Nop,
-                0x0a => Instruction::Load16Mem(R16Mem::BC),
-                0x10 => Instruction::Stop(Self::read_u8_helper(buf, addr + 1)),
-                0x18 => Instruction::JR(Self::read_u8_helper(buf, addr + 1) as i8, None),
-                0x1a => Instruction::Load16Mem(R16Mem::DE),
-                0x20 => Instruction::JR(
-                    Self::read_u8_helper(buf, addr + 1) as i8,
-                    Some(Conditions::NZ),
+            0b00 => match byte & 0x0F {
+                0x0 if byte == 0x0 => Instruction::Nop,
+                0x1 => Instruction::Load16Imm(
+                    R16::from_operand(byte >> 4 & 0xf),
+                    Self::read_u16_helper(buf, addr + 1),
                 ),
-                0x28 => Instruction::JR(
-                    Self::read_u8_helper(buf, addr + 1) as i8,
-                    Some(Conditions::Z),
-                ),
-                0x2a => Instruction::Load16Mem(R16Mem::HLInc),
-                0x30 => Instruction::JR(
-                    Self::read_u8_helper(buf, addr + 1) as i8,
-                    Some(Conditions::NC),
-                ),
-                0x38 => Instruction::JR(
-                    Self::read_u8_helper(buf, addr + 1) as i8,
-                    Some(Conditions::C),
-                ),
-                0x3a => Instruction::Load16Mem(R16Mem::HLDec),
-                0x21 => {
-                    Instruction::Load16Imm(LoadTarget16::HL, Self::read_u16_helper(buf, addr + 1))
-                }
-                0x31 => {
-                    Instruction::Load16Imm(LoadTarget16::SP, Self::read_u16_helper(buf, addr + 1))
-                }
-                0x3e => Instruction::Load8Imm(LoadTarget8::A, Self::read_u8_helper(buf, addr + 1)),
-                _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                0x2 => Instruction::Store8(R16Mem::from_operand(byte >> 4 & 0xf)),
+                0x3 => Instruction::INC16(R16::from_operand(byte >> 4 & 0x3)),
+                0x4 => Instruction::INC8(R8::from_operand(byte >> 3 & 0x7)),
+                0x5 => Instruction::DEC8(R8::from_operand(byte >> 3 & 0x7)),
+                0x8 if byte == 0x8 => Instruction::StoreSP(Self::read_u16_helper(buf, addr + 1)),
+                0xa => Instruction::Load16Mem(R16Mem::from_operand(byte >> 4 & 0xf)),
+                0xb => Instruction::DEC16(R16::from_operand(byte >> 4 & 0x3)),
+                _ => match byte & 0x7 {
+                    0x0 => {
+                        if byte & 0b0010_0000 == 0 {
+                            Instruction::JR(Self::read_u8_helper(buf, addr + 1) as i8, None)
+                        } else {
+                            Instruction::JR(
+                                Self::read_u8_helper(buf, addr + 1) as i8,
+                                Some(Condition::from_operand((byte >> 3) & 0x3)),
+                            )
+                        }
+                    }
+                    0x6 => Instruction::Load8Imm(
+                        R8::from_operand(byte >> 3),
+                        Self::read_u8_helper(buf, addr + 1),
+                    ),
+                    _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                },
             },
             0b01 => match byte {
                 0x76 => Instruction::Halt,
                 _ => {
-                    let target_operand = LoadOperand::from_operand((byte >> 3) & 0b111);
-                    let source_operand = LoadOperand::from_operand(byte & 0b111);
+                    let target_operand = R8::from_operand((byte >> 3) & 0b111);
+                    let source_operand = R8::from_operand(byte & 0b111);
                     Instruction::Load8(target_operand, source_operand)
                 }
             },
             0b10 => {
-                let source_operand = ALUOperand::from_operand(byte & 0b111);
+                let source_operand = R8::from_operand(byte & 0b111);
                 match (byte >> 3) & 0b111 {
-                    0b000 => Instruction::ADD(ALUTarget::A, source_operand),
-                    0b001 => Instruction::ADC(ALUTarget::A, source_operand),
-                    0b010 => Instruction::SUB(ALUTarget::A, source_operand),
-                    0b011 => Instruction::SBC(ALUTarget::A, source_operand),
-                    0b100 => Instruction::AND(ALUTarget::A, source_operand),
-                    0b101 => Instruction::XOR(ALUTarget::A, source_operand),
-                    0b110 => Instruction::OR(ALUTarget::A, source_operand),
-                    0b111 => Instruction::CP(ALUTarget::A, source_operand),
+                    0b000 => Instruction::ADD(source_operand),
+                    0b001 => Instruction::ADC(source_operand),
+                    0b010 => Instruction::SUB(source_operand),
+                    0b011 => Instruction::SBC(source_operand),
+                    0b100 => Instruction::AND(source_operand),
+                    0b101 => Instruction::XOR(source_operand),
+                    0b110 => Instruction::OR(source_operand),
+                    0b111 => Instruction::CP(source_operand),
                     _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
                 }
             }
             0b11 => match byte {
-                0xe0 => Instruction::Store8H(
-                    Self::read_u8_helper(buf, addr + 1) as u16 | 0xFF00,
-                    StoreSource::A,
-                ),
+                0xe0 => Instruction::Store8H(Self::read_u8_helper(buf, addr + 1) as u16 | 0xFF00),
                 0xcd => Instruction::Call(Self::read_u16_helper(buf, addr + 1)),
-                0xc5 => Instruction::Push(StackOperand::BC),
-                0xd5 => Instruction::Push(StackOperand::DE),
-                0xe5 => Instruction::Push(StackOperand::HL),
-                0xf5 => Instruction::Push(StackOperand::AF),
-                0xc1 => Instruction::Pop(StackOperand::BC),
-                0xd1 => Instruction::Pop(StackOperand::DE),
-                0xe1 => Instruction::Pop(StackOperand::HL),
-                0xf1 => Instruction::Pop(StackOperand::AF),
-                0xc0 => Instruction::Ret(Some(Conditions::NZ)),
-                0xc8 => Instruction::Ret(Some(Conditions::Z)),
+                0xc5 => Instruction::Push(R16Stack::BC),
+                0xd5 => Instruction::Push(R16Stack::DE),
+                0xe5 => Instruction::Push(R16Stack::HL),
+                0xf5 => Instruction::Push(R16Stack::AF),
+                0xc1 => Instruction::Pop(R16Stack::BC),
+                0xd1 => Instruction::Pop(R16Stack::DE),
+                0xe1 => Instruction::Pop(R16Stack::HL),
+                0xf1 => Instruction::Pop(R16Stack::AF),
+                0xc0 => Instruction::Ret(Some(Condition::NZ)),
+                0xc8 => Instruction::Ret(Some(Condition::Z)),
                 0xc9 => Instruction::Ret(None),
-                0xd0 => Instruction::Ret(Some(Conditions::NC)),
-                0xd8 => Instruction::Ret(Some(Conditions::C)),
+                0xd0 => Instruction::Ret(Some(Condition::NC)),
+                0xd8 => Instruction::Ret(Some(Condition::C)),
                 _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
             },
             _ => unreachable!(),
