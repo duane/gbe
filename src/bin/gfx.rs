@@ -15,7 +15,6 @@ const MAX_HEIGHT: usize = screen::HEIGHT * MAX_SCALE_FACTOR;
 
 fn main() {
     let default_resolution = WindowResolution::new(MIN_WIDTH as f32, MIN_HEIGHT as f32);
-    println!("scaling factor: {}", default_resolution.scale_factor());
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -45,7 +44,6 @@ fn on_window_resize(mut resize_reader: EventReader<WindowResized>) {
     if let Some(ref resized) = resize_reader.read().next() {
         let width = resized.width;
         let height = resized.height;
-        // println!("scale factor: {}", scale_factor);
         println!("width: {}", width);
         println!("height: {}", height);
     }

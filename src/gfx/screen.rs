@@ -93,7 +93,6 @@ pub fn screen(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     ));
 
     let mut camera = Camera2dBundle::default();
-    println!("{:?}", camera.projection);
     camera.projection.viewport_origin = Vec2::new(0.0, 0.0);
     camera.projection.scaling_mode = ScalingMode::Fixed {
         width: WIDTH as f32,
@@ -103,7 +102,6 @@ pub fn screen(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         min: Vec2::new(0.0, 0.0),
         max: Vec2::new(WIDTH as f32, HEIGHT as f32),
     };
-    println!("{:?}", camera.projection);
     commands.spawn(camera);
 }
 
