@@ -7,7 +7,7 @@ use crate::rom::ROM;
 
 pub struct Machine {
     pub cpu: CPU,
-    bus: Rc<Mutex<Bus>>,
+    pub bus: Rc<Mutex<Bus>>,
 }
 
 impl Machine {

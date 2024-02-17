@@ -1,10 +1,10 @@
-use std::rc::Rc;
-
 use crate::rom::ROM;
+use crate::serial::SerialOut;
 
 pub struct Bus {
     pub work_ram: [u8; 0x8_000],
     pub rom: ROM,
+    pub serial_out: SerialOut,
 }
 
 impl Bus {
@@ -12,6 +12,7 @@ impl Bus {
         Self {
             work_ram: [0; 0x8_000],
             rom,
+            serial_out: SerialOut::new(),
         }
     }
 
@@ -86,6 +87,15 @@ impl Bus {
                 unimplemented!("UNUSABLE WRITE - {:#04x}", addr);
             }
             0xFF00..=0xFF7F => {
+                match addr {
+                    0xFF01 => {
+                        self.serial_out.buffer(data);
+                    }
+                    0xFF02 => {
+                        self.serial_out.control(data);
+                    }
+                    _ => unimplemented!("IO REGISTER WRITE - {:#04x}", addr),
+                }
                 unimplemented!("IO REGISTER WRITE - {:#04x}", addr);
             }
             0xFF80..=0xFFFE => {

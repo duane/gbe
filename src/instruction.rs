@@ -170,7 +170,6 @@ impl Display for Instruction {
             Instruction::Load16(target, source) => match (target, source) {
                 (LoadTarget::HL, LoadSource::Imm16(val)) => write!(f, "LD HL, {:#06x}", val),
                 (LoadTarget::SP, LoadSource::Imm16(val)) => write!(f, "LD SP, {:#06x}", val),
-                _ => unimplemented!("Instruction::Display::Load16"),
             },
             Instruction::Load8(target, source) => write!(f, "LD {}, {}", target, source),
 

@@ -3,6 +3,24 @@ name = "gbc"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+gfx = ["bevy"]
+default = ["gfx"]
 
-[dependencies]
+
+[[bin]]
+name = "gfx"
+path = "src/bin/gfx.rs"
+required_features = ["gfx"]
+
+[[bin]]
+name = "headless"
+path = "src/bin/headless.rs"
+required-features = []
+
+[dependencies.rand]
+version = "0.8.5"
+
+[dependencies.bevy]
+version = "0.12.1"
+optional = true
