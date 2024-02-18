@@ -1,32 +1,49 @@
+use crate::mem_layout::*;
+use bitfield_struct::bitfield;
+
 pub struct SerialOut {
-    buffer: u8,
-    control: u8,
+    sb: u8,
+    sc: SCRegister,
+}
+
+#[bitfield(u8)]
+#[derive(PartialEq, Eq, Hash)]
+pub struct SCRegister {
+    pub transfer_enable: bool,
+    #[bits(5)]
+    _unused: u8,
+    pub high_clock_speed: bool,
+    pub is_master_clock: bool,
 }
 
 impl SerialOut {
     pub fn new() -> SerialOut {
         SerialOut {
-            buffer: 0,
-            control: 1,
+            sb: 0,
+            sc: SCRegister::from_bits(0x0),
         }
     }
 
-    pub fn set_buffer(&mut self, data: u8) {
-        self.buffer = data;
-    }
-
-    pub fn get_buffer(&self) -> u8 {
-        self.buffer
-    }
-
-    pub fn set_control(&mut self, data: u8) {
-        if data == 0x81 {
-            print!("{}", self.buffer as char);
-            self.control = 0;
+    pub fn write(&mut self, addr: u16, data: u8) {
+        match addr {
+            SB => self.sb = data,
+            SC => {
+                if data == 0x81 {
+                    print!("{}", self.sb as char);
+                    self.sc = SCRegister::from_bits(0x0);
+                } else {
+                    self.sc = SCRegister::from_bits(data);
+                }
+            }
+            _ => panic!("Invalid serial write {:#04x}", addr),
         }
     }
 
-    pub fn get_control(&self) -> u8 {
-        self.control
+    pub fn read(&self, addr: u16) -> u8 {
+        match addr {
+            SB => self.sb,
+            SC => self.sc.into_bits(),
+            _ => panic!("Invalid serial write {:#04x}", addr),
+        }
     }
 }

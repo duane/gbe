@@ -1,31 +1,10 @@
+use crate::mem_layout::*;
 use bitfield_struct::bitfield;
 use bitflags::bitflags;
 
-const NR10: u16 = 0xFF10; // Channel 1 sweep
-const NR11: u16 = 0xFF11; // Channel 1 length timer & duty cycle
-const NR12: u16 = 0xFF12; // Channel 1 volume & envelope
-const NR13: u16 = 0xFF13; // Channel 1 period low [write-only]
-const NR14: u16 = 0xFF14; // Channel 1 period high & control
-const NR21: u16 = 0xFF16; // Channel 2 sweep
-const NR22: u16 = 0xFF17; // Channel 2 length timer & duty cycle
-const NR23: u16 = 0xFF18; // Channel 2 volume & envelope
-const NR24: u16 = 0xFF19; // Channel 2 period low [write-only]
-const NR30: u16 = 0xFF1a; // Channel 3 DAC enable
-const NR31: u16 = 0xFF1b; // Channel 3 length timer [write-only]
-const NR32: u16 = 0xFF1c; // Channel 3 output level
-const NR33: u16 = 0xFF1d; // Channel 3 period low [write-only]
-const NR34: u16 = 0xFF1e; // Channel 3 period high & control
-const NR41: u16 = 0xFF20; // Channel 4 length timer [write-only]
-const NR42: u16 = 0xFF21; // Channel 4 volume & envelope
-const NR43: u16 = 0xFF22; // Channel 4 frequency & randomness
-const NR44: u16 = 0xFF23; // Channel 4 control
-const NR50: u16 = 0xFF24; // Master volume & VIN panning
-const NR51: u16 = 0xFF25; // Sound panning
-const NR52: u16 = 0xFF26; // Audio Master Control
-
 #[bitfield(u8)]
 #[derive(PartialEq, Eq, Hash)]
-pub struct RegisterNR50 {
+pub struct NR50Register {
     vin_left: bool,
     #[bits(3)]
     volume_left: u8,
@@ -36,7 +15,7 @@ pub struct RegisterNR50 {
 
 bitflags! {
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct RegisterNR51: u8 {
+    pub struct NR51Register: u8 {
         const LEFT_CHANNEL_4 = 0b1000_0000;
         const LEFT_CHANNEL_3 = 0b0100_0000;
         const LEFT_CHANNEL_2 = 0b0010_0000;
@@ -50,7 +29,7 @@ bitflags! {
 
 bitflags! {
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct RegisterNR52: u8 {
+    pub struct NR52Register: u8 {
         const ALL_SOUND_ON = 0b1000_0000;
         const CH4_ON = 0b0000_1000;
         const CH3_ON = 0b0000_0100;
@@ -79,9 +58,9 @@ pub struct APU {
     pub nr42: u8,
     pub nr43: u8,
     pub nr44: u8,
-    pub nr50: RegisterNR50,
-    pub nr51: RegisterNR51,
-    pub nr52: RegisterNR52,
+    pub nr50: NR50Register,
+    pub nr51: NR51Register,
+    pub nr52: NR52Register,
     pub wave_ram: [u8; 0x10],
 }
 
@@ -111,10 +90,10 @@ impl APU {
             NR43 => self.nr43 = data,
             NR44 => self.nr44 = data,
 
-            NR50 => self.nr50 = RegisterNR50::from_bits(data),
-            NR51 => self.nr51 = RegisterNR51::from_bits_truncate(data),
-            NR52 => self.nr52 = RegisterNR52::from_bits_truncate(data),
-            0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize] = data,
+            NR50 => self.nr50 = NR50Register::from_bits(data),
+            NR51 => self.nr51 = NR51Register::from_bits_truncate(data),
+            NR52 => self.nr52 = NR52Register::from_bits_truncate(data),
+            WAVE_RAM..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM) as usize] = data,
             _ => panic!("Invalid audio register: {:#04x}", addr),
         }
     }
@@ -142,7 +121,7 @@ impl APU {
             NR50 => self.nr50.into_bits(),
             NR51 => self.nr51.bits(),
             NR52 => self.nr52.bits(),
-            0xFF30..=0xFF3F => self.wave_ram[(addr - 0xFF30) as usize],
+            WAVE_RAM..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM) as usize],
             _ => panic!("Invalid audio register: {:#04x}", addr),
         }
     }

@@ -7,4 +7,6 @@ pub mod machine;
 pub mod rom;
 pub mod serial;
 
+pub mod mem_layout;
 pub mod ppu;
+pub use mem_layout::*;

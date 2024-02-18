@@ -1,9 +1,10 @@
 #[cfg(feature = "gfx")]
 pub mod screen;
+use crate::mem_layout::*;
+use bitfield_struct::bitfield;
 
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
-pub const LCDC: u16 = 0xFF40;
 
 use bitflags::bitflags;
 
@@ -50,43 +51,40 @@ bitflags! {
 }
 
 pub struct PPU {
-    pub vram: [u8; 0x2000],
+    pub vram: [u8; SCRN1_END as usize - VRAM as usize + 1],
     pub mode: Mode,
     pub dot_counter: usize,
     pub lcdc: LCDControl,
+    pub bgp: BGPRegister,
 }
 
 impl PPU {
     pub fn new() -> PPU {
         PPU {
-            vram: [0; 0x2000],
+            vram: [0; SCRN1_END as usize - VRAM as usize + 1],
             mode: Mode::OAMScan,
             dot_counter: 0,
             lcdc: LCDControl::empty(),
+            bgp: BGPRegister::default(),
         }
     }
 
     pub fn read(&self, addr: u16) -> u8 {
-        assert!(addr >= 0x8000 && addr <= 0x9FFF, "PPU READ - {:#04x}", addr);
-        self.vram[addr as usize - 0x8000]
+        match addr {
+            BGP => self.bgp.into_bits(),
+            LCDC => self.lcdc.bits(),
+            VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize],
+            _ => panic!("Invalid PPU read {:#04x}", addr),
+        }
     }
 
     pub fn write(&mut self, addr: u16, data: u8) {
-        assert!(
-            addr >= 0x8000 && addr <= 0x9FFF,
-            "PPU WRITE - {:#02x} to {:#04x}",
-            data,
-            addr
-        );
-        self.vram[addr as usize - 0x8000] = data;
-    }
-
-    pub fn lcdc_write(&mut self, data: u8) {
-        self.lcdc = LCDControl::from_bits_retain(data);
-    }
-
-    pub fn lcdc_read(&self) -> u8 {
-        self.lcdc.bits()
+        match addr {
+            BGP => self.bgp = BGPRegister::from_bits(data),
+            LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
+            VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize] = data,
+            _ => panic!("Invalid PPU read {:#04x}", addr),
+        }
     }
 
     pub fn process_tick(&mut self, m_cycles: u8) {
@@ -96,4 +94,17 @@ impl PPU {
             self.dot_counter -= DOTS_PER_FRAME;
         }
     }
+}
+
+#[bitfield(u8)]
+#[derive(PartialEq, Eq, Hash)]
+pub struct BGPRegister {
+    #[bits(2)]
+    pub id3: usize,
+    #[bits(2)]
+    pub id2: usize,
+    #[bits(2)]
+    pub id1: usize,
+    #[bits(2)]
+    pub id0: usize,
 }
