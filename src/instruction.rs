@@ -3,6 +3,64 @@
 
 use std::fmt::Display;
 
+#[derive(Debug, Clone, Copy)]
+pub enum BitRef {
+    B0,
+    B1,
+    B2,
+    B3,
+    B4,
+    B5,
+    B6,
+    B7,
+}
+
+impl Display for BitRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BitRef::B0 => write!(f, "0"),
+            BitRef::B1 => write!(f, "1"),
+            BitRef::B2 => write!(f, "2"),
+            BitRef::B3 => write!(f, "3"),
+            BitRef::B4 => write!(f, "4"),
+            BitRef::B5 => write!(f, "5"),
+            BitRef::B6 => write!(f, "6"),
+            BitRef::B7 => write!(f, "7"),
+        }
+    }
+}
+
+impl BitRef {
+    pub fn encode(&self) -> u8 {
+        match self {
+            BitRef::B0 => 0b000,
+            BitRef::B1 => 0b001,
+            BitRef::B2 => 0b010,
+            BitRef::B3 => 0b011,
+            BitRef::B4 => 0b100,
+            BitRef::B5 => 0b101,
+            BitRef::B6 => 0b110,
+            BitRef::B7 => 0b111,
+        }
+    }
+
+    pub fn decode(encoded: u8) -> Self {
+        assert!(encoded < 8, "BitRef::decode({:#04x})", encoded);
+        match encoded {
+            0b000 => BitRef::B0,
+            0b001 => BitRef::B1,
+            0b010 => BitRef::B2,
+            0b011 => BitRef::B3,
+            0b100 => BitRef::B4,
+            0b101 => BitRef::B5,
+            0b110 => BitRef::B6,
+            0b111 => BitRef::B7,
+            _ => unimplemented!("BitRef::decode({:#04x})", encoded),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum R16 {
     BC,
     DE,
@@ -41,6 +99,7 @@ impl Display for R16 {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum R16Mem {
     BC,
     DE,
@@ -80,6 +139,7 @@ impl Display for R16Mem {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum R8 {
     B,
     C,
@@ -135,6 +195,7 @@ impl R8 {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum R16Stack {
     BC,
     DE,
@@ -164,6 +225,7 @@ impl Display for R16Stack {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Condition {
     NZ,
     Z,
@@ -206,7 +268,9 @@ pub enum Instruction {
     Load16Imm(R16, u16),
     Load16Mem(R16Mem),
     Load8Imm(R8, u8),
+    Load8C,
     Store8(R16Mem),
+    Store8C,
     Store8H(u16),
     StoreSP(u16),
     Load8(R8, R8),
@@ -227,6 +291,10 @@ pub enum Instruction {
     XOR(R8),
     OR(R8),
     CP(R8),
+
+    BIT(BitRef, R8),
+    SET(BitRef, R8),
+    RESET(BitRef, R8),
 }
 
 impl Display for Instruction {
@@ -239,6 +307,8 @@ impl Display for Instruction {
             Instruction::Load16Mem(mem) => write!(f, "LD A, {}", mem),
             Instruction::Load8Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load8(target, source) => write!(f, "LD {}, {}", target, source),
+            Instruction::Load8C => write!(f, "LD C, [A]"),
+            Instruction::Store8C => write!(f, "LD [C], A"),
             Instruction::Store8(dest) => write!(f, "LD [{}], A", dest),
             Instruction::Store8H(addr) => write!(f, "LDH [0x{:04x}], A", addr),
             Instruction::StoreSP(addr) => write!(f, "LD {}, SP", addr),
@@ -275,40 +345,49 @@ impl Display for Instruction {
             Instruction::XOR(source) => write!(f, "XOR A, {}", source),
             Instruction::OR(source) => write!(f, "OR A, {}", source),
             Instruction::CP(source) => write!(f, "CP A, {}", source),
+
+            Instruction::BIT(b3, r8) => write!(f, "BIT {}, {}", b3, r8),
+            Instruction::SET(b3, r8) => write!(f, "SET {}, {}", b3, r8),
+            Instruction::RESET(b3, r8) => write!(f, "RES {}, {}", b3, r8),
         }
     }
 }
 
 impl Instruction {
     pub fn size_header(insn: u8) -> u8 {
-        let size = match insn >> 6 {
-            0b00 => match insn & 0x0F {
-                0x0 if insn == 0x0 => 1, // NOP
-                0x1 => 3,                // LD r16, imm16
-                0x2 => 1,                // LD [r16mem], A
-                0x3 => 1,                // INC r16
-                0x4 => 1,                // INC r8
-                0x5 => 1,                // DEC r8
-                0x8 if insn == 0x8 => 3, // LD [imm16], SP
-                0xa => 1,                // LD A, [r16mem]
-                0xb => 1,                // DEC r16
-                _ => match insn & 0x7 {
-                    0x0 => 2, // JR e8
-                    0x6 => 2, // LD r8, imm8
+        let size = if insn == 0xCB {
+            2
+        } else {
+            match insn >> 6 {
+                0b00 => match insn & 0x0F {
+                    0x0 if insn == 0x0 => 1, // NOP
+                    0x1 => 3,                // LD r16, imm16
+                    0x2 => 1,                // LD [r16mem], A
+                    0x3 => 1,                // INC r16
+                    0x4 => 1,                // INC r8
+                    0x5 => 1,                // DEC r8
+                    0x8 if insn == 0x8 => 3, // LD [imm16], SP
+                    0xa => 1,                // LD A, [r16mem]
+                    0xb => 1,                // DEC r16
+                    _ => match insn & 0x7 {
+                        0x0 => 2, // JR e8
+                        0x6 => 2, // LD r8, imm8
+                        _ => unimplemented!("Instruction::size({:#02x})", insn),
+                    },
+                },
+                0b01 => 1,
+                0b10 => 1,
+                0b11 => match insn {
+                    0xe0 => 2,
+                    0xcd => 3,
+                    0xe2 | 0xf2 => 1,
+                    0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
+                    0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
+                    0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
                     _ => unimplemented!("Instruction::size({:#02x})", insn),
                 },
-            },
-            0b01 => 1,
-            0b10 => 1,
-            0b11 => match insn {
-                0xe0 => 2,
-                0xcd => 3,
-                0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
-                0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
-                0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
                 _ => unimplemented!("Instruction::size({:#02x})", insn),
-            },
-            _ => unimplemented!("Instruction::size({:#02x})", insn),
+            }
         };
         // println!("size_header({:#02x}) = {}", insn, size);
         size
@@ -350,6 +429,8 @@ impl Instruction {
             Instruction::Load8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
+            Instruction::Store8C => vec![0xe3],
+            Instruction::Load8C => vec![0xf3],
             Instruction::Store8(dest) => {
                 vec![0x3 | dest.as_operand() << 4]
             }
@@ -386,6 +467,15 @@ impl Instruction {
             Instruction::XOR(source) => vec![0b10_101_000 | source.as_operand()],
             Instruction::OR(source) => vec![0b10_110_000 | source.as_operand()],
             Instruction::CP(source) => vec![0b10_111_000 | source.as_operand()],
+            Instruction::BIT(b3, r8) => {
+                vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
+            }
+            Instruction::RESET(b3, r8) => {
+                vec![0xCB, 0b10_000_000 | b3.encode() << 3 | r8.as_operand()]
+            }
+            Instruction::SET(b3, r8) => {
+                vec![0xCB, 0b11_000_000 | b3.encode() << 3 | r8.as_operand()]
+            }
         }
     }
 
@@ -402,6 +492,8 @@ impl Instruction {
             Instruction::Load16Imm(_, _) => 3,
             Instruction::Load8Imm(_, _) => 2,
             Instruction::Load8(_, _) => 1,
+            Instruction::Load8C => 1,
+            Instruction::Store8C => 1,
             Instruction::Store8(_) => 1,
             Instruction::Store8H(_) => 2,
             Instruction::StoreSP(_) => 3,
@@ -421,76 +513,59 @@ impl Instruction {
             Instruction::XOR(_) => 1,
             Instruction::OR(_) => 1,
             Instruction::CP(_) => 1,
+
+            Instruction::BIT(_, _) => 2,
+            Instruction::RESET(_, _) => 2,
+            Instruction::SET(_, _) => 2,
         }
     }
 
-    pub fn m_cycles(&self) -> u8 {
-        match self {
-            Instruction::Nop => 1,
-            Instruction::Halt => 1,
-            Instruction::Stop(_) => 1,
-            Instruction::Call(_) => 7,
-            Instruction::JR(_, _) => 4,
-            Instruction::Ret(_) => 1,
-
-            Instruction::Load16Mem(_) => 7,
-            Instruction::Load16Imm(_, _) => 7,
-            Instruction::Load8Imm(_, _) => 4,
-            Instruction::Load8(_, _) => 1,
-            Instruction::Store8(_) => 1,
-            Instruction::Store8H(_) => 4,
-            Instruction::StoreSP(_) => 5,
-            Instruction::Push(_) => 1,
-            Instruction::Pop(_) => 1,
-
-            Instruction::INC16(_) => 1,
-            Instruction::INC8(_) => 1,
-            Instruction::DEC16(_) => 1,
-            Instruction::DEC8(_) => 1,
-
-            Instruction::ADD(_) => 1,
-            Instruction::ADC(_) => 1,
-            Instruction::SUB(_) => 1,
-            Instruction::SBC(_) => 1,
-            Instruction::AND(_) => 1,
-            Instruction::XOR(_) => 1,
-            Instruction::OR(_) => 1,
-            Instruction::CP(_) => 1,
-        }
+    pub fn m_cycles(&self) -> (u8, u8) {
+        let (taken, not_taken) = self.t_cycles();
+        (taken / 4, not_taken / 4)
     }
 
-    pub fn t_cycles(&self) -> u8 {
+    pub fn t_cycles(&self) -> (u8, u8) {
         match self {
-            Instruction::Nop => 4,
-            Instruction::Halt => 4,
-            Instruction::Stop(_) => 4,
-            Instruction::Call(_) => 24,
-            Instruction::JR(_, _) => 12,
-            Instruction::Ret(_) => 16,
+            Instruction::Nop => (4, 4),
+            Instruction::Halt => (4, 4),
+            Instruction::Stop(_) => (4, 4),
+            Instruction::Call(_) => (24, 24),
+            Instruction::JR(_, _) => (12, 8),
+            Instruction::Ret(None) => (16, 16),
+            Instruction::Ret(Some(_)) => (20, 8),
 
-            Instruction::Load16Mem(_) => 8,
-            Instruction::Load16Imm(_, _) => 12,
-            Instruction::Load8Imm(_, _) => 8,
-            Instruction::Load8(_, _) => 4,
-            Instruction::Store8(_) => 1,
-            Instruction::Store8H(_) => 12,
-            Instruction::StoreSP(_) => 5,
-            Instruction::Push(_) => 16,
-            Instruction::Pop(_) => 16,
+            Instruction::Load16Mem(_) => (8, 8),
+            Instruction::Load16Imm(_, _) => (12, 12),
+            Instruction::Load8Imm(_, _) => (8, 8),
+            Instruction::Load8(R8::HLRef, _) => (8, 8),
+            Instruction::Load8(_, R8::HLRef) => (8, 8),
+            Instruction::Load8(_, _) => (4, 4),
+            Instruction::Load8C => (8, 8),
+            Instruction::Store8C => (8, 8),
+            Instruction::Store8(_) => (8, 8),
+            Instruction::Store8H(_) => (12, 12),
+            Instruction::StoreSP(_) => (20, 20),
+            Instruction::Push(_) => (16, 16),
+            Instruction::Pop(_) => (16, 16),
 
-            Instruction::INC16(_) => 1,
-            Instruction::INC8(_) => 1,
-            Instruction::DEC16(_) => 1,
-            Instruction::DEC8(_) => 1,
+            Instruction::INC16(_) => (8, 8),
+            Instruction::INC8(_) => (4, 4),
+            Instruction::DEC16(_) => (8, 8),
+            Instruction::DEC8(_) => (4, 4),
 
-            Instruction::ADD(_) => 4,
-            Instruction::ADC(_) => 4,
-            Instruction::SUB(_) => 4,
-            Instruction::SBC(_) => 4,
-            Instruction::AND(_) => 4,
-            Instruction::XOR(_) => 4,
-            Instruction::OR(_) => 4,
-            Instruction::CP(_) => 4,
+            Instruction::ADD(_) => (4, 4),
+            Instruction::ADC(_) => (4, 4),
+            Instruction::SUB(_) => (4, 4),
+            Instruction::SBC(_) => (4, 4),
+            Instruction::AND(_) => (4, 4),
+            Instruction::XOR(_) => (4, 4),
+            Instruction::OR(_) => (4, 4),
+            Instruction::CP(_) => (4, 4),
+
+            Instruction::BIT(_, _) => (8, 8),
+            Instruction::RESET(_, _) => (8, 8),
+            Instruction::SET(_, _) => (8, 8),
         }
     }
 
@@ -564,6 +639,26 @@ impl Instruction {
             }
             0b11 => match byte {
                 0xe0 => Instruction::Store8H(Self::read_u8_helper(buf, addr + 1) as u16 | 0xFF00),
+                0xe2 => Instruction::Store8C,
+                0xf2 => Instruction::Load8C,
+                0xcb => {
+                    let byte = buf[addr as usize + 1];
+                    match byte >> 6 {
+                        0b01 => Instruction::BIT(
+                            BitRef::decode((byte >> 3) & 0x7),
+                            R8::from_operand(byte & 0x7),
+                        ),
+                        0b10 => Instruction::RESET(
+                            BitRef::decode((byte >> 3) >> 0x7),
+                            R8::from_operand(byte & 0x7),
+                        ),
+                        0b11 => Instruction::SET(
+                            BitRef::decode((byte >> 3) >> 0x7),
+                            R8::from_operand(byte & 0x7),
+                        ),
+                        _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                    }
+                }
                 0xcd => Instruction::Call(Self::read_u16_helper(buf, addr + 1)),
                 0xc5 => Instruction::Push(R16Stack::BC),
                 0xd5 => Instruction::Push(R16Stack::DE),

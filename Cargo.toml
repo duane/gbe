@@ -18,6 +18,15 @@ name = "headless"
 path = "src/bin/headless.rs"
 required-features = []
 
+[dependencies]
+thiserror = "1.0.57"
+
+[dependencies.color-eyre]
+version = "0.6.2"
+
+[dependencies.bitflags]
+version = "2.4.2"
+
 [dependencies.rand]
 version = "0.8.5"
 

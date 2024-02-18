@@ -1,3 +1,4 @@
+use color_eyre::Result;
 use std::{fmt::Display, rc::Rc, sync::Mutex};
 
 use crate::{
@@ -88,17 +89,17 @@ pub struct CPU {
     pub sp: u16,
 
     pub m: u16,
-    pub t: u32,
+    pub t: u16,
 
     pub halted: bool,
 
-    bus: Rc<Mutex<Bus>>,
+    bus: Bus,
 }
 
 impl CPU {
-    pub fn new(bus: Rc<Mutex<Bus>>) -> Self {
+    pub fn new(bus: Bus) -> Self {
         Self {
-            bus: bus,
+            bus,
             af: AFRegister::default(),
             bc: BCRegister::default(),
             de: DERegister::default(),
@@ -132,26 +133,13 @@ impl CPU {
         self.t = 0;
         self.halted = false;
 
-        self.bus.lock().unwrap().reset();
+        self.bus.reset();
     }
 
-    pub fn execute_single_instruction(&mut self) {
-        let mut bus = self.bus.lock().unwrap();
-        let insn = bus.read_u8(self.pc);
-        self.pc += 1;
-        let size = Instruction::size_header(insn);
-        let mut buf = vec![0u8; (size + 1).into()];
-        buf[0] = insn;
-        for i in 0..(size as usize - 1) {
-            buf[i + 1] = bus.read_u8(self.pc);
-            self.pc += 1;
-        }
-        let decoded = Instruction::from_u8_slice(buf.as_slice(), 0);
+    fn execute_decoded_instruction(&mut self, decoded: Instruction) -> Result<()> {
+        let mut action_taken = true;
         match decoded {
-            Instruction::Nop => {
-                self.m += 1;
-                self.t += 4;
-            }
+            Instruction::Nop => (),
             Instruction::Stop(_) => {
                 self.halted = true;
             }
@@ -160,91 +148,70 @@ impl CPU {
             }
             Instruction::Call(addr) => {
                 self.sp -= 2;
-                bus.write_u16(self.sp, self.pc);
+                self.bus.write_u16(self.sp, self.pc)?;
                 self.pc = addr;
-                self.m += 6;
-                self.t += 24;
             }
             Instruction::JR(offset, None) => {
                 self.pc = (self.pc as i32 + offset as i32) as u16;
-                self.m += 3;
-                self.t += 12;
             }
             Instruction::JR(offset, Some(cond)) => unsafe {
-                let should_jump = match cond {
+                action_taken = match cond {
                     Condition::Z => self.af.single.f & 0x80 == 0x80,
                     Condition::NZ => self.af.single.f & 0x80 != 0x80,
                     Condition::C => self.af.single.f & 0x10 == 0x10,
                     Condition::NC => self.af.single.f & 0x10 != 0x10,
                 };
-                if should_jump {
+                if action_taken {
                     self.pc = (self.pc as i32 + offset as i32) as u16;
-                    self.m += 3;
-                    self.t += 12;
-                } else {
-                    self.m += 2;
-                    self.t += 8;
                 }
             },
             Instruction::Ret(None) => {
-                self.pc = bus.read_u16(self.sp);
+                self.pc = self.bus.read_u16(self.sp)?;
                 self.sp += 2;
-                self.m += 3;
-                self.t += 16;
             }
             Instruction::Ret(Some(cond)) => unsafe {
-                let should_ret = match cond {
+                let action_taken = match cond {
                     Condition::Z => self.af.single.f & 0x80 == 0x80,
                     Condition::NZ => self.af.single.f & 0x80 != 0x80,
                     Condition::C => self.af.single.f & 0x10 == 0x10,
                     Condition::NC => self.af.single.f & 0x10 != 0x10,
                 };
-                if should_ret {
-                    self.pc = bus.read_u16(self.sp);
+                if action_taken {
+                    self.pc = self.bus.read_u16(self.sp)?;
                 }
             },
             Instruction::Load16Mem(r16mem) => unsafe {
                 match r16mem {
-                    R16Mem::BC => self.af.single.a = bus.read_u8(self.bc.bc),
-                    R16Mem::DE => self.af.single.a = bus.read_u8(self.de.de),
+                    R16Mem::BC => self.af.single.a = self.bus.read_u8(self.bc.bc)?,
+                    R16Mem::DE => self.af.single.a = self.bus.read_u8(self.de.de)?,
                     R16Mem::HLInc => {
-                        self.af.single.a = bus.read_u8(self.hl.hl);
+                        self.af.single.a = self.bus.read_u8(self.hl.hl)?;
                         self.hl.hl += 1;
                     }
                     R16Mem::HLDec => {
-                        self.af.single.a = bus.read_u8(self.hl.hl);
+                        self.af.single.a = self.bus.read_u8(self.hl.hl)?;
                         self.hl.hl -= 1;
                     }
                 }
-                self.m += 2;
-                self.t += 8;
             },
-            Instruction::Load16Imm(r16, val) => {
-                match r16 {
-                    R16::BC => self.bc.bc = val,
-                    R16::DE => self.de.de = val,
-                    R16::HL => self.hl.hl = val,
-                    R16::SP => self.sp = val,
-                }
-                self.m += 3;
-                self.t += 12;
-            }
-            Instruction::Load8Imm(reg, val) => {
-                match reg {
-                    R8::A => self.af.single.a = val,
-                    R8::B => self.bc.single.b = val,
-                    R8::C => self.bc.single.c = val,
-                    R8::D => self.de.single.d = val,
-                    R8::E => self.de.single.e = val,
-                    R8::H => self.hl.single.h = val,
-                    R8::L => self.hl.single.l = val,
-                    R8::HLRef => unsafe {
-                        bus.write_u8(self.hl.hl, val);
-                    },
-                }
-                self.m += 4;
-                self.t += 8;
-            }
+            Instruction::Load16Imm(r16, val) => match r16 {
+                R16::BC => self.bc.bc = val,
+                R16::DE => self.de.de = val,
+                R16::HL => self.hl.hl = val,
+                R16::SP => self.sp = val,
+            },
+            Instruction::Load8Imm(reg, val) => match reg {
+                R8::A => self.af.single.a = val,
+                R8::B => self.bc.single.b = val,
+                R8::C => self.bc.single.c = val,
+                R8::D => self.de.single.d = val,
+                R8::E => self.de.single.e = val,
+                R8::H => self.hl.single.h = val,
+                R8::L => self.hl.single.l = val,
+                R8::HLRef => unsafe {
+                    self.bus.write_u8(self.hl.hl, val)?;
+                },
+            },
             Instruction::Load8(dst, src) => unsafe {
                 let read_byte = match src {
                     R8::A => self.af.single.a,
@@ -254,7 +221,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 match dst {
                     R8::A => self.af.single.a = read_byte,
@@ -264,56 +231,53 @@ impl CPU {
                     R8::E => self.de.single.e = read_byte,
                     R8::H => self.hl.single.h = read_byte,
                     R8::L => self.hl.single.l = read_byte,
-                    R8::HLRef => bus.write_u8(self.hl.hl, read_byte),
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, read_byte)?,
                 };
+            },
+            Instruction::Load8C => unsafe {
+                self.af.single.a = self.bus.read_u8(0xff00 + self.bc.single.c as u16)?;
+            },
+            Instruction::Store8C => unsafe {
+                self.bus
+                    .write_u8(0xff00 + self.bc.single.c as u16, self.af.single.a)?;
             },
             Instruction::Store8(r16mem) => unsafe {
                 match r16mem {
-                    R16Mem::BC => bus.write_u8(self.bc.bc, self.af.single.a),
-                    R16Mem::DE => bus.write_u8(self.de.de, self.af.single.a),
+                    R16Mem::BC => self.bus.write_u8(self.bc.bc, self.af.single.a)?,
+                    R16Mem::DE => self.bus.write_u8(self.de.de, self.af.single.a)?,
                     R16Mem::HLInc => {
-                        bus.write_u8(self.hl.hl, self.af.single.a);
+                        self.bus.write_u8(self.hl.hl, self.af.single.a)?;
                         self.hl.hl += 1;
                     }
                     R16Mem::HLDec => {
-                        bus.write_u8(self.hl.hl, self.af.single.a);
+                        self.bus.write_u8(self.hl.hl, self.af.single.a)?;
                         self.hl.hl -= 1;
                     }
-                };
-                self.m += 4;
-                self.t += 8;
+                }
             },
             Instruction::Store8H(addr) => unsafe {
-                bus.write_u8(addr, self.af.single.a);
-                self.m += 4;
-                self.t += 8;
+                self.bus.write_u8(addr, self.af.single.a)?;
             },
             Instruction::StoreSP(imm16) => {
-                bus.write_u16(imm16, self.sp);
-                self.m += 5;
-                self.t += 20;
+                self.bus.write_u16(imm16, self.sp)?;
             }
             Instruction::Push(operand) => unsafe {
                 self.sp -= 2;
                 match operand {
-                    R16Stack::AF => bus.write_u16(self.sp, self.af.af),
-                    R16Stack::BC => bus.write_u16(self.sp, self.bc.bc),
-                    R16Stack::DE => bus.write_u16(self.sp, self.de.de),
-                    R16Stack::HL => bus.write_u16(self.sp, self.hl.hl),
+                    R16Stack::AF => self.bus.write_u16(self.sp, self.af.af)?,
+                    R16Stack::BC => self.bus.write_u16(self.sp, self.bc.bc)?,
+                    R16Stack::DE => self.bus.write_u16(self.sp, self.de.de)?,
+                    R16Stack::HL => self.bus.write_u16(self.sp, self.hl.hl)?,
                 }
-                self.m += 4;
-                self.t += 16;
             },
             Instruction::Pop(operand) => {
                 match operand {
-                    R16Stack::AF => self.af.af = bus.read_u16(self.sp),
-                    R16Stack::BC => self.bc.bc = bus.read_u16(self.sp),
-                    R16Stack::DE => self.de.de = bus.read_u16(self.sp),
-                    R16Stack::HL => self.hl.hl = bus.read_u16(self.sp),
+                    R16Stack::AF => self.af.af = self.bus.read_u16(self.sp)?,
+                    R16Stack::BC => self.bc.bc = self.bus.read_u16(self.sp)?,
+                    R16Stack::DE => self.de.de = self.bus.read_u16(self.sp)?,
+                    R16Stack::HL => self.hl.hl = self.bus.read_u16(self.sp)?,
                 }
                 self.sp += 2;
-                self.m += 3;
-                self.t += 12;
             }
             Instruction::INC16(r16) => unsafe {
                 match r16 {
@@ -332,7 +296,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 let result = r8_val.wrapping_add(1);
                 self.af.single.f = ((result == 0) as u8) << 7
@@ -346,7 +310,7 @@ impl CPU {
                     R8::E => self.de.single.e = result,
                     R8::H => self.hl.single.h = result,
                     R8::L => self.hl.single.l = result,
-                    R8::HLRef => bus.write_u8(self.hl.hl, result),
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
             Instruction::DEC16(r16) => unsafe {
@@ -366,7 +330,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 let result = r8_val.wrapping_sub(1);
                 self.af.single.f = ((result == 0) as u8) << 7
@@ -381,7 +345,7 @@ impl CPU {
                     R8::E => self.de.single.e = result,
                     R8::H => self.hl.single.h = result,
                     R8::L => self.hl.single.l = result,
-                    R8::HLRef => bus.write_u8(self.hl.hl, result),
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
             Instruction::ADD(reg) => unsafe {
@@ -393,7 +357,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a,
                 };
                 let c = Self::carry(a, b, false);
@@ -415,7 +379,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a,
                 };
                 let c3 = Self::carry(a, b, c);
@@ -436,7 +400,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a,
                 };
                 let result = a.wrapping_sub(n);
@@ -456,7 +420,7 @@ impl CPU {
                     R8::E => self.af.single.a &= self.de.single.e,
                     R8::H => self.af.single.a &= self.hl.single.h,
                     R8::L => self.af.single.a &= self.hl.single.l,
-                    R8::HLRef => self.af.single.a &= bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.af.single.a &= self.bus.read_u8(self.hl.hl)?,
                     R8::A => {}
                 }
                 let z = self.af.single.a == 0;
@@ -474,7 +438,7 @@ impl CPU {
                     R8::E => self.af.single.a |= self.de.single.e,
                     R8::H => self.af.single.a |= self.hl.single.h,
                     R8::L => self.af.single.a |= self.hl.single.l,
-                    R8::HLRef => self.af.single.a |= bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.af.single.a |= self.bus.read_u8(self.hl.hl)?,
                     R8::A => {}
                 }
                 let z = self.af.single.a == 0;
@@ -492,7 +456,7 @@ impl CPU {
                     R8::E => self.af.single.a ^= self.de.single.e,
                     R8::H => self.af.single.a ^= self.hl.single.h,
                     R8::L => self.af.single.a ^= self.hl.single.l,
-                    R8::HLRef => self.af.single.a ^= bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.af.single.a ^= self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a ^= self.af.single.a,
                 }
                 let z = self.af.single.a == 0;
@@ -511,7 +475,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a,
                 };
                 let z = a == n;
@@ -530,7 +494,7 @@ impl CPU {
                     R8::E => self.de.single.e,
                     R8::H => self.hl.single.h,
                     R8::L => self.hl.single.l,
-                    R8::HLRef => bus.read_u8(self.hl.hl),
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
                     R8::A => self.af.single.a,
                 };
                 let result = a.wrapping_sub(n.wrapping_add(1));
@@ -542,7 +506,87 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
+            Instruction::BIT(bit, r8) => unsafe {
+                let mask: u8 = 1 << bit.encode();
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let result = val & mask;
+                let z = result == 0;
+                let n = false;
+                let h = true;
+                self.af.single.f = ((z as u8) << 7)
+                    | ((n as u8) << 6)
+                    | ((h as u8) << 5)
+                    | (self.af.single.f & 0x10);
+            },
+            Instruction::RESET(bit, r8) => unsafe {
+                let mask: u8 = 0xff ^ (1 << bit.encode());
+                match r8 {
+                    R8::B => self.bc.single.b &= mask,
+                    R8::C => self.bc.single.c &= mask,
+                    R8::D => self.de.single.d &= mask,
+                    R8::E => self.de.single.e &= mask,
+                    R8::H => self.hl.single.h &= mask,
+                    R8::L => self.hl.single.l &= mask,
+                    R8::HLRef => {
+                        let val = self.bus.read_u8(self.hl.hl)?;
+                        self.bus.write_u8(self.hl.hl, val & mask)?;
+                    }
+                    R8::A => self.af.single.a &= mask,
+                };
+            },
+            Instruction::SET(bit, r8) => unsafe {
+                let mask: u8 = 1 << bit.encode();
+                match r8 {
+                    R8::B => self.bc.single.b |= mask,
+                    R8::C => self.bc.single.c |= mask,
+                    R8::D => self.de.single.d |= mask,
+                    R8::E => self.de.single.e |= mask,
+                    R8::H => self.hl.single.h |= mask,
+                    R8::L => self.hl.single.l |= mask,
+                    R8::HLRef => {
+                        let val = self.bus.read_u8(self.hl.hl)?;
+                        self.bus.write_u8(self.hl.hl, val | mask)?;
+                    }
+                    R8::A => self.af.single.a |= mask,
+                };
+            },
         }
+
+        if action_taken {
+            self.m = self.m.wrapping_add(decoded.t_cycles().0 as u16);
+            self.t = self.t.wrapping_add(decoded.t_cycles().0 as u16);
+        } else {
+            self.m = self.m.wrapping_add(decoded.t_cycles().1 as u16);
+            self.t = self.t.wrapping_add(decoded.t_cycles().1 as u16);
+        }
+        Ok(())
+    }
+
+    pub fn execute_single_instruction(&mut self) -> Result<()> {
+        let insn = self.bus.read_u8(self.pc)?;
+        self.pc += 1;
+        let size = Instruction::size_header(insn);
+        let mut buf = vec![0u8; (size + 1).into()];
+        buf[0] = insn;
+        for i in 0..(size as usize - 1) {
+            buf[i + 1] = self.bus.read_u8(self.pc)?;
+            self.pc += 1;
+        }
+        let decoded = Instruction::from_u8_slice(buf.as_slice(), 0);
+        let result = self.execute_decoded_instruction(decoded);
+        if result.is_err() {
+            println!("CPU state: {}", self);
+        }
+        result
     }
 }
 
