@@ -1,8 +1,11 @@
-use bitflags::bitflags;
+#[cfg(feature = "gfx")]
+pub mod screen;
 
-const DOTS_PER_FRAME: usize = 70224;
-const DOTS_PER_SECOND: usize = 0x400000;
-const LCDC_REGISTER: u16 = 0xFF40;
+pub const DOTS_PER_FRAME: usize = 70224;
+pub const DOTS_PER_SECOND: usize = 0x400000;
+pub const LCDC: u16 = 0xFF40;
+
+use bitflags::bitflags;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {
@@ -34,7 +37,7 @@ impl Mode {
 }
 
 bitflags! {
-    pub struct LCDC: u8 {
+    pub struct LCDControl: u8 {
         const ENABLED = 0b1000_0000;
         const WTMAP_IDX = 0b0100_0000;
         const WINDOW_ENABLED = 0b0010_0000;
@@ -50,7 +53,7 @@ pub struct PPU {
     pub vram: [u8; 0x2000],
     pub mode: Mode,
     pub dot_counter: usize,
-    pub lcdc: LCDC,
+    pub lcdc: LCDControl,
 }
 
 impl PPU {
@@ -59,7 +62,7 @@ impl PPU {
             vram: [0; 0x2000],
             mode: Mode::OAMScan,
             dot_counter: 0,
-            lcdc: LCDC::empty(),
+            lcdc: LCDControl::empty(),
         }
     }
 
@@ -79,7 +82,7 @@ impl PPU {
     }
 
     pub fn lcdc_write(&mut self, data: u8) {
-        self.lcdc = LCDC::from_bits_retain(data);
+        self.lcdc = LCDControl::from_bits_retain(data);
     }
 
     pub fn lcdc_read(&self) -> u8 {

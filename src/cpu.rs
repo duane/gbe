@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use std::{fmt::Display, rc::Rc, sync::Mutex};
+use std::fmt::Display;
 
 use crate::{
     bus::Bus,

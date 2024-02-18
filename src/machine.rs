@@ -1,7 +1,4 @@
-use std::rc::Rc;
-use std::sync::Mutex;
-
-use crate::bus::{self, Bus};
+use crate::bus::Bus;
 use crate::cpu::CPU;
 use crate::rom::ROM;
 

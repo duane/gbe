@@ -1,5 +1,5 @@
-use crate::audio::headless::HeadlessAudio;
-use crate::gfx::ppu::PPU;
+use crate::apu::APU;
+use crate::ppu::{self, PPU};
 use crate::rom::ROM;
 use crate::serial::SerialOut;
 
@@ -18,7 +18,7 @@ pub struct Bus {
     pub work_ram: [u8; 0x8_000],
     pub rom: ROM,
     pub serial_out: SerialOut,
-    pub audio: HeadlessAudio,
+    pub apu: APU,
     pub external_ram: [u8; 0x2_000],
     pub ppu: PPU,
 }
@@ -29,7 +29,7 @@ impl Bus {
             work_ram: [0; 0x8_000],
             rom,
             serial_out: SerialOut::new(),
-            audio: HeadlessAudio::new(),
+            apu: APU::new(),
             external_ram: [0; 0x2_000],
             ppu: PPU::new(),
         }
@@ -60,8 +60,10 @@ impl Bus {
             0xFF00..=0xFF7F => match addr {
                 0xFF01 => Ok(self.serial_out.get_buffer()),
                 0xFF02 => Ok(self.serial_out.get_control()),
-                0xFF26 => Ok(self.audio.read()),
-                0xFF40 => Ok(self.ppu.lcdc_read()),
+                0xFF10..=0xFF14 | 0xFF16..=0xFF1E | 0xFF20..=0xFF26 | 0xFF30..=0xFF3F => {
+                    Ok(self.apu.read(addr))
+                }
+                ppu::LCDC => Ok(self.ppu.lcdc_read()),
                 _ => Err(BusError::InvalidRead("IO REGISTER".into(), addr).into()),
             },
             0xFF80..=0xFFFE => Err(BusError::InvalidRead("HIGH RAM".into(), addr).into()),
@@ -89,7 +91,9 @@ impl Bus {
             0xFF00..=0xFF7F => match addr {
                 0xFF01 => Ok(self.serial_out.set_buffer(data)),
                 0xFF02 => Ok(self.serial_out.set_control(data)),
-                0xFF26 => Ok(self.audio.set(data)),
+                0xFF10..=0xFF14 | 0xFF16..=0xFF1E | 0xFF20..=0xFF26 | 0xFF30..=0xFF3F => {
+                    Ok(self.apu.write(addr, data))
+                }
                 0xFF40 => Ok(self.ppu.lcdc_write(data)),
                 _ => Err(BusError::InvalidWrite("IO REGISTER".into(), addr, data).into()),
             },

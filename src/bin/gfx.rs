@@ -1,9 +1,8 @@
 use bevy::{
     prelude::*,
-    render::render_resource::PrimitiveTopology,
     window::{EnabledButtons, WindowResized, WindowResolution},
 };
-use gbc::gfx::screen;
+use gbc::ppu::screen;
 
 const MIN_SCALE_FACTOR: usize = 5;
 
@@ -34,7 +33,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(gbc::gfx::screen::ColoredMesh2dPlugin)
+        .add_plugins(gbc::ppu::screen::ColoredMesh2dPlugin)
         .add_systems(Startup, screen::screen)
         .add_systems(Update, on_window_resize)
         .run();

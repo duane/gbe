@@ -364,13 +364,13 @@ impl Instruction {
                     0x1 => 3,                // LD r16, imm16
                     0x2 => 1,                // LD [r16mem], A
                     0x3 => 1,                // INC r16
-                    0x4 => 1,                // INC r8
-                    0x5 => 1,                // DEC r8
                     0x8 if insn == 0x8 => 3, // LD [imm16], SP
                     0xa => 1,                // LD A, [r16mem]
                     0xb => 1,                // DEC r16
                     _ => match insn & 0x7 {
                         0x0 => 2, // JR e8
+                        0x4 => 1, // INC r8
+                        0x5 => 1, // DEC r8
                         0x6 => 2, // LD r8, imm8
                         _ => unimplemented!("Instruction::size({:#02x})", insn),
                     },
@@ -592,8 +592,6 @@ impl Instruction {
                 ),
                 0x2 => Instruction::Store8(R16Mem::from_operand(byte >> 4 & 0xf)),
                 0x3 => Instruction::INC16(R16::from_operand(byte >> 4 & 0x3)),
-                0x4 => Instruction::INC8(R8::from_operand(byte >> 3 & 0x7)),
-                0x5 => Instruction::DEC8(R8::from_operand(byte >> 3 & 0x7)),
                 0x8 if byte == 0x8 => Instruction::StoreSP(Self::read_u16_helper(buf, addr + 1)),
                 0xa => Instruction::Load16Mem(R16Mem::from_operand(byte >> 4 & 0xf)),
                 0xb => Instruction::DEC16(R16::from_operand(byte >> 4 & 0x3)),
@@ -608,6 +606,8 @@ impl Instruction {
                             )
                         }
                     }
+                    0x4 => Instruction::INC8(R8::from_operand(byte >> 3 & 0x7)),
+                    0x5 => Instruction::DEC8(R8::from_operand(byte >> 3 & 0x7)),
                     0x6 => Instruction::Load8Imm(
                         R8::from_operand(byte >> 3),
                         Self::read_u8_helper(buf, addr + 1),
