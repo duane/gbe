@@ -574,14 +574,22 @@ impl CPU {
     pub fn execute_single_instruction(&mut self) -> Result<()> {
         let insn = self.bus.read_u8(self.pc)?;
         self.pc += 1;
-        let size = Instruction::size_header(insn);
-        let mut buf = vec![0u8; (size + 1).into()];
+        let size = Instruction::size_header(insn)? as usize;
+        let mut buf = vec![0u8; size];
         buf[0] = insn;
-        for i in 0..(size as usize - 1) {
+        for i in 0..(size - 1) {
             buf[i + 1] = self.bus.read_u8(self.pc)?;
             self.pc += 1;
         }
-        let decoded = Instruction::from_u8_slice(buf.as_slice(), 0);
+        let (decoded, bytes_consumed) =
+            Instruction::from_u8_slice(buf.as_slice(), 0, size as usize)?;
+        assert!(
+            bytes_consumed as usize == buf.len(),
+            "differing expectations of instruction size: {} vs {}, bytes: {:02x?}",
+            bytes_consumed,
+            buf.len(),
+            buf
+        );
         let result = self.execute_decoded_instruction(decoded);
         if result.is_err() {
             println!("CPU state: {}", self);

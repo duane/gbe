@@ -2,6 +2,7 @@
 // https://gbdev.io/pandocs/CPU_Instruction_Set.html
 
 use std::fmt::Display;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BitRef {
@@ -297,6 +298,20 @@ pub enum Instruction {
     RESET(BitRef, R8),
 }
 
+pub const ILLEGAL_INSTRUCTIONS: [u8; 11] = [
+    0xd3, 0xdb, 0xdd, 0xe3, 0xe4, 0xeb, 0xec, 0xed, 0xf4, 0xfc, 0xfd,
+];
+
+#[derive(Error, Debug)]
+pub enum InstructionError {
+    #[error("Unknown Instruction - {0:#02x}")]
+    Illegal(u8),
+    #[error("Unknown instruction - {0:#02x}")]
+    Unknown(u8),
+    #[error("Instruction is incomplete - {0:02x?}")]
+    Incomplete(Vec<u8>),
+}
+
 impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -354,7 +369,10 @@ impl Display for Instruction {
 }
 
 impl Instruction {
-    pub fn size_header(insn: u8) -> u8 {
+    pub fn size_header(insn: u8) -> Result<u8, InstructionError> {
+        if ILLEGAL_INSTRUCTIONS.contains(&insn) {
+            return Err(InstructionError::Illegal(insn).into());
+        }
         let size = if insn == 0xCB {
             2
         } else {
@@ -372,7 +390,7 @@ impl Instruction {
                         0x4 => 1, // INC r8
                         0x5 => 1, // DEC r8
                         0x6 => 2, // LD r8, imm8
-                        _ => unimplemented!("Instruction::size({:#02x})", insn),
+                        _ => return Err(InstructionError::Unknown(insn).into()),
                     },
                 },
                 0b01 => 1,
@@ -384,13 +402,13 @@ impl Instruction {
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
                     0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
-                    _ => unimplemented!("Instruction::size({:#02x})", insn),
+                    _ => return Err(InstructionError::Unknown(insn).into()),
                 },
-                _ => unimplemented!("Instruction::size({:#02x})", insn),
+                _ => return Err(InstructionError::Unknown(insn).into()),
             }
         };
         // println!("size_header({:#02x}) = {}", insn, size);
-        size
+        Ok(size)
     }
 
     pub fn encode(&self) -> Vec<u8> {
@@ -579,10 +597,21 @@ impl Instruction {
         ((hi as u16) << 8) | (lo as u16)
     }
 
-    pub fn from_u8_slice(buf: &[u8], addr: u16) -> Self {
+    pub fn from_u8_slice(
+        buf: &[u8],
+        addr: u16,
+        min_size: usize,
+    ) -> Result<(Instruction, u8), InstructionError> {
+        if addr as usize + min_size > buf.len() {
+            return Err(InstructionError::Incomplete(buf[addr as usize..].to_vec()).into());
+        }
+
         let byte = buf[addr as usize];
+        if ILLEGAL_INSTRUCTIONS.contains(&byte) {
+            return Err(InstructionError::Illegal(byte).into());
+        }
         let quad = byte >> 6;
-        match quad & 0b11 {
+        let result = match quad & 0b11 {
             // load quadrant
             0b00 => match byte & 0x0F {
                 0x0 if byte == 0x0 => Instruction::Nop,
@@ -612,7 +641,7 @@ impl Instruction {
                         R8::from_operand(byte >> 3),
                         Self::read_u8_helper(buf, addr + 1),
                     ),
-                    _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                    _ => return Err(InstructionError::Unknown(byte).into()),
                 },
             },
             0b01 => match byte {
@@ -634,7 +663,7 @@ impl Instruction {
                     0b101 => Instruction::XOR(source_operand),
                     0b110 => Instruction::OR(source_operand),
                     0b111 => Instruction::CP(source_operand),
-                    _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                    _ => return Err(InstructionError::Unknown(byte).into()),
                 }
             }
             0b11 => match byte {
@@ -656,7 +685,7 @@ impl Instruction {
                             BitRef::decode((byte >> 3) >> 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
-                        _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                        _ => return Err(InstructionError::Unknown(byte).into()),
                     }
                 }
                 0xcd => Instruction::Call(Self::read_u16_helper(buf, addr + 1)),
@@ -673,9 +702,12 @@ impl Instruction {
                 0xc9 => Instruction::Ret(None),
                 0xd0 => Instruction::Ret(Some(Condition::NC)),
                 0xd8 => Instruction::Ret(Some(Condition::C)),
-                _ => unimplemented!("Instruction::from_u8({:#04x})", byte),
+                _ => return Err(InstructionError::Unknown(byte).into()),
             },
             _ => unreachable!(),
-        }
+        };
+
+        let insn_size = result.size();
+        Ok((result, insn_size))
     }
 }
