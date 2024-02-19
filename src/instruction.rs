@@ -547,8 +547,8 @@ impl Instruction {
                     0xf0 => 2, // ldh a, [imm8]
                     0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
-                    0xc4 => 3,               // call cond, imm16
-                    0xF3 | 0xFB | 0xD9 => 1, // ei, di, reti
+                    0xc4 | 0xCC | 0xd4 | 0xdc => 3, // call cond, imm16
+                    0xF3 | 0xFB | 0xD9 => 1,        // ei, di, reti
                     0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => 1, // rst
                     0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
@@ -961,7 +961,7 @@ impl Instruction {
                     }
                 }
                 0xcd => Instruction::CallA16(Self::read_u16_helper(buf, addr + 1)),
-                0xc4 => Instruction::CallCondA16(
+                0xc4 | 0xCC | 0xd4 | 0xdc => Instruction::CallCondA16(
                     Cond::from_operand(byte >> 3 & 0x3),
                     Self::read_u16_helper(buf, addr + 1),
                 ),
