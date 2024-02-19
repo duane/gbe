@@ -92,6 +92,8 @@ pub struct CPU {
     pub t: u16,
 
     pub halted: bool,
+    pub locked: bool,
+    pub ime: bool,
 
     bus: Bus,
 }
@@ -111,6 +113,8 @@ impl CPU {
             m: 0,
             t: 0,
             halted: false,
+            locked: false,
+            ime: false,
         }
     }
 
@@ -195,6 +199,17 @@ impl CPU {
                     self.pc = a16;
                 }
             },
+            Instruction::Reti => {
+                self.pc = self.bus.read_u16(self.sp)?;
+                self.sp += 2;
+                self.ime = true;
+            }
+            Instruction::Ei => {
+                self.ime = true;
+            }
+            Instruction::Di => {
+                self.ime = false;
+            }
             Instruction::Ret => {
                 self.pc = self.bus.read_u16(self.sp)?;
                 self.sp += 2;

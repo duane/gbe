@@ -372,10 +372,10 @@ pub enum Instruction {
     Rst(Tgt3),              // 0xc6
     Ret,                    // 0xc0
     // prefix // 0xcb
-    CallA16(A16), // 0xcd
-    AdcAN8(N8),   // 0xce
-    SubAN8(N8),   // 0xD6
-    // reti  // 0xD9
+    CallA16(A16),  // 0xcd
+    AdcAN8(N8),    // 0xce
+    SubAN8(N8),    // 0xD6
+    Reti,          // 0xD9
     SbcAN8(N8),    // 0xDE
     StoreAA8H(A8), // 0xE0
     StoreACH,      // 0xE2
@@ -386,11 +386,12 @@ pub enum Instruction {
     XorAN8(N8),     // 0xEE
     LoadAA8H(N8),   // 0xF0
     LoadACH,        // 0xF2
-    // di // 0xF3
-    OrAN8(N8), // 0xF6
+    Di,             // 0xF3
+    OrAN8(N8),      // 0xF6
     // LoadHLSPImm8 // 0xF8
     // LoadHLSP // 0xF9
     LoadAA16(A16), // 0xFA
+    Ei,            // 0xfb
     // ei // 0xFB
     CpAN8(N8), // 0xFE
 
@@ -500,6 +501,11 @@ impl Display for Instruction {
             Instruction::Bit(b3, r8) => write!(f, "bit {}, {}", b3, r8),
             Instruction::Res(b3, r8) => write!(f, "res {}, {}", b3, r8),
             Instruction::Set(b3, r8) => write!(f, "set {}, {}", b3, r8),
+
+            Instruction::Reti => write!(f, "reti"),
+            Instruction::Ei => write!(f, "ei"),
+
+            Instruction::Di => write!(f, "di"),
         }
     }
 }
@@ -541,7 +547,8 @@ impl Instruction {
                     0xf0 => 2, // ldh a, [imm8]
                     0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
-                    0xc4 => 3, // call cond, imm16
+                    0xc4 => 3,               // call cond, imm16
+                    0xF3 | 0xFB | 0xD9 => 1, // ei, di, reti
                     0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => 1, // rst
                     0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
@@ -562,6 +569,9 @@ impl Instruction {
             Instruction::Nop => vec![0x0],
             Instruction::Halt => vec![0x76],
             Instruction::StopN8(n8) => vec![0x10, *n8],
+            Instruction::Reti => vec![0xD9],
+            Instruction::Di => vec![0xF3],
+            Instruction::Ei => vec![0xFB],
             Instruction::CallA16(a16) => vec![0xcd, *a16 as u8, (*a16 >> 8) as u8],
             Instruction::CallCondA16(cond, a16) => {
                 vec![0xc4 | cond.as_operand(), *a16 as u8, (*a16 >> 8) as u8]
@@ -659,6 +669,9 @@ impl Instruction {
             Instruction::CallCondA16(_, _) => 3,
             Instruction::JumpNear(_) | Instruction::JumpNearCond(_, _) => 2,
             Instruction::JumpFar(_) | Instruction::JumpFarCond(_, _) => 3,
+            Instruction::Reti => 1,
+            Instruction::Ei => 1,
+            Instruction::Di => 1,
             Instruction::Ret => 1,
             Instruction::RetCond(_) => 1,
 
@@ -737,6 +750,9 @@ impl Instruction {
             Instruction::Nop => (4, 4),
             Instruction::Halt => (4, 4),
             Instruction::StopN8(_) => (4, 4),
+            Instruction::Reti => (16, 16),
+            Instruction::Ei => (4, 4),
+            Instruction::Di => (4, 4),
             Instruction::CallA16(_) => (24, 24),
             Instruction::CallCondA16(_, _) => (24, 12),
             Instruction::JumpNear(_) => (12, 8),
@@ -958,6 +974,10 @@ impl Instruction {
                 0xee => Instruction::XorAN8(Self::read_u8_helper(buf, addr + 1)),
                 0xf6 => Instruction::OrAN8(Self::read_u8_helper(buf, addr + 1)),
                 0xfe => Instruction::CpAN8(Self::read_u8_helper(buf, addr + 1)),
+
+                0xF3 => Instruction::Di,
+                0xFb => Instruction::Ei,
+                0xd9 => Instruction::Reti,
 
                 0xc7 => Instruction::Rst(Tgt3::T0),
                 0xcf => Instruction::Rst(Tgt3::T1),
@@ -1256,6 +1276,22 @@ mod tests {
         assert_eq!(
             Instruction::from_u8_slice(&[0xFE, 0x12], 0, 2).unwrap(),
             (Instruction::CpAN8(0x12), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0xD9).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xD9], 0, 1).unwrap(),
+            (Instruction::Reti, 1)
+        );
+        assert_eq!(Instruction::size_header(0xF3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xF3], 0, 1).unwrap(),
+            (Instruction::Di, 1)
+        );
+        assert_eq!(Instruction::size_header(0xFB).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xFb], 0, 1).unwrap(),
+            (Instruction::Ei, 1)
         );
 
         assert_eq!(Instruction::size_header(0xc9).unwrap(), 1);
