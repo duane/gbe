@@ -4,7 +4,7 @@
 use std::fmt::Display;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BitRef {
     B0,
     B1,
@@ -61,7 +61,7 @@ impl BitRef {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16 {
     BC,
     DE,
@@ -100,7 +100,7 @@ impl Display for R16 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16Mem {
     BC,
     DE,
@@ -140,7 +140,7 @@ impl Display for R16Mem {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R8 {
     B,
     C,
@@ -196,7 +196,7 @@ impl R8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16Stack {
     BC,
     DE,
@@ -226,7 +226,7 @@ impl Display for R16Stack {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Condition {
     NZ,
     Z,
@@ -257,6 +257,7 @@ impl Display for Condition {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Instruction {
     Nop,
     Halt,
@@ -317,7 +318,7 @@ impl Display for Instruction {
         match self {
             Instruction::Nop => write!(f, "NOP"),
             Instruction::Halt => write!(f, "HALT"),
-            Instruction::Stop(val) => write!(f, "STOP {:#04x}", val),
+            Instruction::Stop(val) => write!(f, "STOP {:#02x}", val),
             Instruction::Load16Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load16Mem(mem) => write!(f, "LD A, {}", mem),
             Instruction::Load8Imm(target, source) => write!(f, "LD {}, {}", target, source),
@@ -378,13 +379,14 @@ impl Instruction {
         } else {
             match insn >> 6 {
                 0b00 => match insn & 0x0F {
-                    0x0 if insn == 0x0 => 1, // NOP
-                    0x1 => 3,                // LD r16, imm16
-                    0x2 => 1,                // LD [r16mem], A
-                    0x3 => 1,                // INC r16
-                    0x8 if insn == 0x8 => 3, // LD [imm16], SP
-                    0xa => 1,                // LD A, [r16mem]
-                    0xb => 1,                // DEC r16
+                    0x0 if insn == 0x0 => 1,  // NOP
+                    0x0 if insn == 0x10 => 2, // STOP
+                    0x1 => 3,                 // LD r16, imm16
+                    0x2 => 1,                 // LD [r16mem], A
+                    0x3 => 1,                 // INC r16
+                    0x8 if insn == 0x8 => 3,  // LD [imm16], SP
+                    0xa => 1,                 // LD A, [r16mem]
+                    0xb => 1,                 // DEC r16
                     _ => match insn & 0x7 {
                         0x0 => 2, // JR e8
                         0x4 => 1, // INC r8
@@ -393,7 +395,6 @@ impl Instruction {
                         _ => return Err(InstructionError::Unknown(insn).into()),
                     },
                 },
-                0b01 => 1,
                 0b10 => 1,
                 0b11 => match insn {
                     0xe0 => 2,
@@ -440,17 +441,17 @@ impl Instruction {
             Instruction::Load16Imm(op, val) => {
                 vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
             }
-            Instruction::Load16Mem(mem) => vec![0xb | mem.as_operand() << 4],
+            Instruction::Load16Mem(mem) => vec![0xa | mem.as_operand() << 4],
             Instruction::Load8Imm(dest, val) => {
                 vec![0x06 | dest.as_operand() << 3, *val]
             }
             Instruction::Load8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
-            Instruction::Store8C => vec![0xe3],
-            Instruction::Load8C => vec![0xf3],
+            Instruction::Store8C => vec![0xe2],
+            Instruction::Load8C => vec![0xf2],
             Instruction::Store8(dest) => {
-                vec![0x3 | dest.as_operand() << 4]
+                vec![0x2 | dest.as_operand() << 4]
             }
             Instruction::Store8H(addr) => {
                 vec![0xe0, (*addr & 0xff) as u8]
@@ -474,7 +475,7 @@ impl Instruction {
                 vec![0xb | r16.as_operand() << 4]
             }
             Instruction::DEC8(r8) => {
-                vec![0x9 | r8.as_operand() << 3]
+                vec![0x5 | r8.as_operand() << 3]
             }
 
             Instruction::ADD(source) => vec![0b10_000_000 | source.as_operand()],
@@ -615,6 +616,7 @@ impl Instruction {
             // load quadrant
             0b00 => match byte & 0x0F {
                 0x0 if byte == 0x0 => Instruction::Nop,
+                0x0 if byte == 0x10 => Instruction::Stop(Self::read_u8_helper(buf, addr + 1)), // STOP
                 0x1 => Instruction::Load16Imm(
                     R16::from_operand(byte >> 4 & 0xf),
                     Self::read_u16_helper(buf, addr + 1),
@@ -709,5 +711,104 @@ impl Instruction {
 
         let insn_size = result.size();
         Ok((result, insn_size))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    const OPCODES: &str = include_str!("../assets/Opcodes.json");
+
+    use serde::{Deserialize, Serialize};
+
+    use super::*;
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct Opcode {
+        mnemonic: String,
+        bytes: usize,
+        cycles: Vec<usize>,
+        // operands: Vec<String>,
+        immediate: bool,
+        flags: HashMap<String, String>,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct OpcodeMap {
+        pub unprefixed: HashMap<String, Opcode>,
+        pub cbprefixed: HashMap<String, Opcode>,
+    }
+
+    fn parse_opcodes() -> OpcodeMap {
+        serde_json::from_str(OPCODES).unwrap()
+    }
+
+    fn unprefixed_legal_opcodes() -> Vec<u8> {
+        (0..u8::MAX)
+            .filter(|b| *b != 0xCB && !ILLEGAL_INSTRUCTIONS.contains(b))
+            .collect()
+    }
+
+    fn cbprefixed_opcodes() -> Vec<u8> {
+        (0..u8::MAX).collect()
+    }
+
+    // regression tests
+    #[test]
+    fn decode_bc_store() {
+        assert_eq!(Instruction::size_header(0x2).unwrap(), 1);
+        let buf = [0x2];
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        assert_eq!(size, 1);
+        assert_eq!(insn, Instruction::Store8(R16Mem::BC));
+        let encoded = insn.encode();
+        assert_eq!(encoded, buf);
+    }
+
+    #[test]
+    fn dec_b() {
+        assert_eq!(Instruction::size_header(0x5).unwrap(), 1);
+        let buf = [0x5];
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        assert_eq!(size, 1);
+        assert_eq!(insn, Instruction::DEC8(R8::B));
+        let encoded = insn.encode();
+        assert_eq!(encoded, buf);
+    }
+
+    #[test]
+    fn load_from_bc_ref() {
+        assert_eq!(Instruction::size_header(0xa).unwrap(), 1);
+        let buf = [0xa];
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        assert_eq!(size, 1);
+        assert_eq!(insn, Instruction::Load16Mem(R16Mem::BC));
+        let encoded = insn.encode();
+        assert_eq!(encoded, buf);
+    }
+
+    #[test]
+    fn stop() {
+        assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
+        let buf = [0x10, 0x34];
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 2).unwrap();
+        assert_eq!(size, 2);
+        assert_eq!(insn, Instruction::Stop(0x34));
+        let encoded = insn.encode();
+        assert_eq!(encoded, buf);
+    }
+
+    #[test]
+    fn can_reencode() {
+        let mut buf: [u8; 3] = [0x0, 0x34, 0x12];
+        for opcode in unprefixed_legal_opcodes() {
+            buf[0] = opcode;
+            if let Ok((insn, size)) = super::Instruction::from_u8_slice(&buf, 0, 3) {
+                let encoded = insn.encode();
+                assert_eq!(encoded.len(), size as usize);
+                assert_eq!(encoded, buf[0..size as usize].to_vec());
+            }
+        }
     }
 }
