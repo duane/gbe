@@ -1,4 +1,4 @@
-use gbc::instruction::{Instruction, InstructionError};
+use gbc::instruction::{Instruction, InstructionError, ILLEGAL_INSTRUCTIONS};
 
 fn main() {
     let mut unknown_size: Vec<u8> = vec![];
@@ -6,7 +6,6 @@ fn main() {
     let mut unknown_prefixed: Vec<u8> = vec![];
     let total: usize = 256 - 1 - 11 + 256;
     let total_prefixed: usize = 256;
-    let total_unprefixed: usize = 256 - 1 - 11;
 
     for instruction in 0..=u8::MAX {
         if gbc::instruction::ILLEGAL_INSTRUCTIONS.contains(&instruction) {
@@ -47,17 +46,20 @@ fn main() {
         total,
         ((total - total_unknown) as f64 / total as f64) * 100.0
     );
+
+    let total_size: usize = 256 - 1 - ILLEGAL_INSTRUCTIONS.len();
+    let total_structured: usize = 256 - 1 - 11 - unknown_size.len();
     println!(
         "{}/{} or {}% of all first bytes are recognized",
-        total_unprefixed - unknown_size.len(),
-        total_unprefixed,
-        ((total_unprefixed - unknown_size.len()) as f64 / total_unprefixed as f64) * 100.0
+        total_size - unknown_size.len(),
+        total_size,
+        ((total_size - unknown_size.len()) as f64 / total_size as f64) * 100.0
     );
     println!(
         "{}/{} or {}% of all first bytes are parsed",
-        total_unprefixed - unknown_structured.len(),
-        total_unprefixed,
-        ((total_unprefixed - unknown_structured.len()) as f64 / total_unprefixed as f64) * 100.0
+        total_structured - unknown_structured.len(),
+        total_structured,
+        ((total_structured - unknown_structured.len()) as f64 / total_structured as f64) * 100.0
     );
     println!(
         "{}/{} or {}% of all prefixed instructions are recognized",
