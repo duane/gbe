@@ -140,21 +140,21 @@ impl CPU {
         let mut action_taken = true;
         match decoded {
             Instruction::Nop => (),
-            Instruction::Stop(_) => {
+            Instruction::StopN8(_) => {
                 self.halted = true;
             }
             Instruction::Halt => {
                 self.halted = true;
             }
-            Instruction::Call(addr) => {
+            Instruction::CallA16(addr) => {
                 self.sp -= 2;
                 self.bus.write_u16(self.sp, self.pc)?;
                 self.pc = addr;
             }
-            Instruction::JR(offset, None) => {
+            Instruction::JumpNear(offset, None) => {
                 self.pc = (self.pc as i32 + offset as i32) as u16;
             }
-            Instruction::JR(offset, Some(cond)) => unsafe {
+            Instruction::JumpNear(offset, Some(cond)) => unsafe {
                 action_taken = match cond {
                     Condition::Z => self.af.single.f & 0x80 == 0x80,
                     Condition::NZ => self.af.single.f & 0x80 != 0x80,
@@ -180,7 +180,7 @@ impl CPU {
                     self.pc = self.bus.read_u16(self.sp)?;
                 }
             },
-            Instruction::Load16Mem(r16mem) => unsafe {
+            Instruction::LoadAR16Mem(r16mem) => unsafe {
                 match r16mem {
                     R16Mem::BC => self.af.single.a = self.bus.read_u8(self.bc.bc)?,
                     R16Mem::DE => self.af.single.a = self.bus.read_u8(self.de.de)?,
@@ -194,16 +194,16 @@ impl CPU {
                     }
                 }
             },
-            Instruction::Load16Imm(r16, val) => match r16 {
+            Instruction::LoadR16N16(r16, val) => match r16 {
                 R16::BC => self.bc.bc = val,
                 R16::DE => self.de.de = val,
                 R16::HL => self.hl.hl = val,
                 R16::SP => self.sp = val,
             },
-            Instruction::Load16ImmMem(addr) => {
+            Instruction::LoadAA16(addr) => {
                 self.af.single.a = self.bus.read_u8(addr)?;
             }
-            Instruction::Load8Imm(reg, val) => match reg {
+            Instruction::LoadR8N8(reg, val) => match reg {
                 R8::A => self.af.single.a = val,
                 R8::B => self.bc.single.b = val,
                 R8::C => self.bc.single.c = val,
@@ -215,7 +215,7 @@ impl CPU {
                     self.bus.write_u8(self.hl.hl, val)?;
                 },
             },
-            Instruction::LoadR8(dst, src) => unsafe {
+            Instruction::LoadR8R8(dst, src) => unsafe {
                 let read_byte = match src {
                     R8::A => self.af.single.a,
                     R8::B => self.bc.single.b,
@@ -237,20 +237,20 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, read_byte)?,
                 };
             },
-            Instruction::Load8CH => unsafe {
+            Instruction::LoadACH => unsafe {
                 self.af.single.a = self.bus.read_u8(0xff00 + self.bc.single.c as u16)?;
             },
-            Instruction::Load8ImmH(addr) => {
+            Instruction::LoadAA8H(addr) => {
                 self.af.single.a = self.bus.read_u8(addr as u16 + 0xff00)?;
             }
-            Instruction::Store16Imm(addr) => unsafe {
+            Instruction::StoreAA16(addr) => unsafe {
                 self.bus.write_u8(addr, self.af.single.a)?;
             },
-            Instruction::Store8CH => unsafe {
+            Instruction::StoreACH => unsafe {
                 self.bus
                     .write_u8(0xff00 + self.bc.single.c as u16, self.af.single.a)?;
             },
-            Instruction::Store8(r16mem) => unsafe {
+            Instruction::StoreAR16Mem(r16mem) => unsafe {
                 match r16mem {
                     R16Mem::BC => self.bus.write_u8(self.bc.bc, self.af.single.a)?,
                     R16Mem::DE => self.bus.write_u8(self.de.de, self.af.single.a)?,
@@ -264,13 +264,13 @@ impl CPU {
                     }
                 }
             },
-            Instruction::Store8H(addr) => unsafe {
-                self.bus.write_u8(addr, self.af.single.a)?;
+            Instruction::StoreAA8H(addr) => unsafe {
+                self.bus.write_u8(addr as u16 | 0xff00, self.af.single.a)?;
             },
-            Instruction::StoreSP(imm16) => {
+            Instruction::StoreSPA16(imm16) => {
                 self.bus.write_u16(imm16, self.sp)?;
             }
-            Instruction::Push(operand) => unsafe {
+            Instruction::PushR16Stack(operand) => unsafe {
                 self.sp -= 2;
                 match operand {
                     R16Stack::AF => self.bus.write_u16(self.sp, self.af.af)?,
@@ -279,7 +279,7 @@ impl CPU {
                     R16Stack::HL => self.bus.write_u16(self.sp, self.hl.hl)?,
                 }
             },
-            Instruction::Pop(operand) => {
+            Instruction::PopR16Stack(operand) => {
                 match operand {
                     R16Stack::AF => self.af.af = self.bus.read_u16(self.sp)?,
                     R16Stack::BC => self.bc.bc = self.bus.read_u16(self.sp)?,
@@ -288,7 +288,7 @@ impl CPU {
                 }
                 self.sp += 2;
             }
-            Instruction::INC16(r16) => unsafe {
+            Instruction::IncR16(r16) => unsafe {
                 match r16 {
                     R16::BC => self.bc.bc += 1,
                     R16::DE => self.de.de += 1,
@@ -296,7 +296,7 @@ impl CPU {
                     R16::SP => self.sp += 1,
                 }
             },
-            Instruction::INC8(r8) => unsafe {
+            Instruction::IncR8(r8) => unsafe {
                 let r8_val = match r8 {
                     R8::A => self.af.single.a,
                     R8::B => self.bc.single.b,
@@ -322,7 +322,7 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
-            Instruction::DEC16(r16) => unsafe {
+            Instruction::DecR16(r16) => unsafe {
                 match r16 {
                     R16::BC => self.bc.bc -= 1,
                     R16::DE => self.de.de -= 1,
@@ -330,7 +330,7 @@ impl CPU {
                     R16::SP => self.sp -= 1,
                 }
             },
-            Instruction::DEC8(r8) => unsafe {
+            Instruction::DecR8(r8) => unsafe {
                 let r8_val = match r8 {
                     R8::A => self.af.single.a,
                     R8::B => self.bc.single.b,
@@ -357,7 +357,7 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
-            Instruction::ADD(reg) => unsafe {
+            Instruction::ADDR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let b = match reg {
                     R8::B => self.bc.single.b,
@@ -378,7 +378,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::ADC(reg) => unsafe {
+            Instruction::ADCR8(reg) => unsafe {
                 let c = self.af.single.f & 0x10 == 0x10;
                 let a = self.af.single.a;
                 let b = match reg {
@@ -400,7 +400,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c3 as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::SUB(reg) => unsafe {
+            Instruction::SUBR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
@@ -421,7 +421,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::AND(reg) => unsafe {
+            Instruction::ANDR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a &= self.bc.single.b,
                     R8::C => self.af.single.a &= self.bc.single.c,
@@ -439,7 +439,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::OR(reg) => unsafe {
+            Instruction::ORR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a |= self.bc.single.b,
                     R8::C => self.af.single.a |= self.bc.single.c,
@@ -457,7 +457,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::XOR(reg) => unsafe {
+            Instruction::XORR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a ^= self.bc.single.b,
                     R8::C => self.af.single.a ^= self.bc.single.c,
@@ -475,7 +475,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::CP(reg) => unsafe {
+            Instruction::CPR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
@@ -494,7 +494,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::SBC(reg) => unsafe {
+            Instruction::SBCR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
