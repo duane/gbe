@@ -250,6 +250,15 @@ impl Condition {
             _ => unimplemented!("Conditions::from_operand({:#04x})", operand),
         }
     }
+
+    fn as_operand(&self) -> u8 {
+        match self {
+            Condition::NZ => 0b00,
+            Condition::Z => 0b01,
+            Condition::NC => 0b10,
+            Condition::C => 0b11,
+        }
+    }
 }
 
 impl Display for Condition {
@@ -301,8 +310,8 @@ pub enum Instruction {
     PopR16Stack(R16Stack),  // 0xc1
     // jp cond // 0xC2
     // jp // 0xc3
-    // CallA16Cond(A16, Condition) // 0xc4
-    PushR16Stack(R16Stack), // 0xC5
+    CallCondA16(Condition, A16), // 0xc4
+    PushR16Stack(R16Stack),      // 0xC5
     // ADDAImm8 // 0xC6
     // rst tgt3 // 0xC7
     // ret (uncond)         // 0xc9
@@ -380,15 +389,16 @@ impl Display for Instruction {
 
             Instruction::PushR16Stack(operand) => write!(f, "PUSH {}", operand),
             Instruction::PopR16Stack(operand) => write!(f, "POP {}", operand),
-            Instruction::CallA16(addr) => write!(f, "CALL {:#08x}", addr),
-            Instruction::JumpNear(offset, cond) => write!(
+            Instruction::CallA16(a16) => write!(f, "CALL {:#04x}", a16),
+            Instruction::CallCondA16(cond, a16) => write!(f, "CALL {}, {:#04x}", cond, a16),
+            Instruction::JumpNear(e8, cond) => write!(
                 f,
                 "JR {}{:+}",
                 match cond {
                     Some(cond) => format!("{}, ", cond),
                     None => "".to_string(),
                 },
-                offset
+                e8
             ),
             Instruction::Ret(cond) => write!(
                 f,
@@ -454,6 +464,7 @@ impl Instruction {
                     0xf0 => 2, // ldh a, [imm8]
                     0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
+                    0xc4 => 3,                             // call cond, imm16
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
                     0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
@@ -470,17 +481,20 @@ impl Instruction {
         match self {
             Instruction::Nop => vec![0x0],
             Instruction::Halt => vec![0x76],
-            Instruction::StopN8(val) => vec![0x10, *val],
-            Instruction::CallA16(val) => vec![0xcd, *val as u8, (*val >> 8) as u8],
-            Instruction::JumpNear(offset, None) => vec![0x18, *offset as u8],
-            Instruction::JumpNear(offset, Some(cond)) => {
+            Instruction::StopN8(n8) => vec![0x10, *n8],
+            Instruction::CallA16(a16) => vec![0xcd, *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::CallCondA16(cond, a16) => {
+                vec![0xc4 | cond.as_operand(), *a16 as u8, (*a16 >> 8) as u8]
+            }
+            Instruction::JumpNear(e8, None) => vec![0x18, *e8 as u8],
+            Instruction::JumpNear(e8, Some(cond)) => {
                 let cond = match cond {
                     Condition::NZ => 0b00,
                     Condition::Z => 0b01,
                     Condition::NC => 0b10,
                     Condition::C => 0b11,
                 };
-                vec![0x20 | cond << 3, *offset as u8]
+                vec![0x20 | cond << 3, *e8 as u8]
             }
             Instruction::Ret(None) => vec![0xc9],
             Instruction::Ret(Some(cond)) => {
@@ -563,6 +577,7 @@ impl Instruction {
             Instruction::Halt => 1,
             Instruction::StopN8(_) => 2,
             Instruction::CallA16(_) => 3,
+            Instruction::CallCondA16(_, _) => 3,
             Instruction::JumpNear(_, _) => 2,
             Instruction::Ret(_) => 1,
 
@@ -612,6 +627,7 @@ impl Instruction {
             Instruction::Halt => (4, 4),
             Instruction::StopN8(_) => (4, 4),
             Instruction::CallA16(_) => (24, 24),
+            Instruction::CallCondA16(_, _) => (24, 12),
             Instruction::JumpNear(_, _) => (12, 8),
             Instruction::Ret(None) => (16, 16),
             Instruction::Ret(Some(_)) => (20, 8),
@@ -759,6 +775,10 @@ impl Instruction {
                     }
                 }
                 0xcd => Instruction::CallA16(Self::read_u16_helper(buf, addr + 1)),
+                0xc4 => Instruction::CallCondA16(
+                    Condition::from_operand(byte >> 3 & 0x3),
+                    Self::read_u16_helper(buf, addr + 1),
+                ),
                 0xc5 => Instruction::PushR16Stack(R16Stack::BC),
                 0xd5 => Instruction::PushR16Stack(R16Stack::DE),
                 0xe5 => Instruction::PushR16Stack(R16Stack::HL),
@@ -954,6 +974,12 @@ mod tests {
         assert_eq!(
             Instruction::from_u8_slice(&[0xcd, 0x34, 0x12], 0, 3).unwrap(),
             (Instruction::CallA16(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xc4).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xc4, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::CallCondA16(Condition::NZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xc1).unwrap(), 1);

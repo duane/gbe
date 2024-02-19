@@ -151,6 +151,19 @@ impl CPU {
                 self.bus.write_u16(self.sp, self.pc)?;
                 self.pc = addr;
             }
+            Instruction::CallCondA16(cond, a16) => unsafe {
+                action_taken = match cond {
+                    Condition::Z => self.af.single.f & 0x80 == 0x80,
+                    Condition::NZ => self.af.single.f & 0x80 != 0x80,
+                    Condition::C => self.af.single.f & 0x10 == 0x10,
+                    Condition::NC => self.af.single.f & 0x10 != 0x10,
+                };
+                if action_taken {
+                    self.sp -= 2;
+                    self.bus.write_u16(self.sp, self.pc)?;
+                    self.pc = a16;
+                }
+            },
             Instruction::JumpNear(offset, None) => {
                 self.pc = (self.pc as i32 + offset as i32) as u16;
             }
