@@ -1038,6 +1038,29 @@ impl CPU {
                     R8::A => self.af.single.a |= mask,
                 };
             },
+
+            Instruction::AddSPN8(n8) => unsafe {
+                let sp = self.sp;
+                let n = n8 as i8 as i16 as u16;
+                let result = sp.wrapping_add(n);
+                let c = (sp & 0xff) + (n & 0xff) > 0xff;
+                let h = (sp & 0xf) + (n & 0xf) > 0xf;
+                self.af.single.f = (self.af.single.f & 0x80) | ((c as u8) << 4) | ((h as u8) << 5);
+                self.sp = result;
+            },
+            Instruction::LoadHLSPN8(n8) => unsafe {
+                let sp = self.sp;
+                let n = n8 as i8 as i16 as u16;
+                let result = sp.wrapping_add(n);
+                self.hl.hl = result;
+                let c = (sp & 0xff) + (n & 0xff) > 0xff;
+                let h = (sp & 0xf) + (n & 0xf) > 0xf;
+                self.af.single.f = (self.af.single.f & 0x80) | ((c as u8) << 4) | ((h as u8) << 5);
+            },
+            Instruction::JumpFarHL => unsafe {
+                self.pc = self.hl.hl;
+            },
+            Instruction::LoadHLSP => self.hl.hl = self.sp,
         }
 
         if action_taken {

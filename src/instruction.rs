@@ -372,26 +372,26 @@ pub enum Instruction {
     Rst(Tgt3),              // 0xc6
     Ret,                    // 0xc0
     // prefix // 0xcb
-    CallA16(A16),  // 0xcd
-    AdcAN8(N8),    // 0xce
-    SubAN8(N8),    // 0xD6
-    Reti,          // 0xD9
-    SbcAN8(N8),    // 0xDE
-    StoreAA8H(A8), // 0xE0
-    StoreACH,      // 0xE2
-    AndAN8(N8),    // 0xE6
-    // ADDSPImm8 // 0xE8
-    // jp hl // 0xE9
+    CallA16(A16),   // 0xcd
+    AdcAN8(N8),     // 0xce
+    SubAN8(N8),     // 0xD6
+    Reti,           // 0xD9
+    SbcAN8(N8),     // 0xDE
+    StoreAA8H(A8),  // 0xE0
+    StoreACH,       // 0xE2
+    AndAN8(N8),     // 0xE6
+    AddSPN8(N8),    // 0xE8
+    JumpFarHL,      // 0xE9
     StoreAA16(A16), // 0xEA
     XorAN8(N8),     // 0xEE
     LoadAA8H(N8),   // 0xF0
     LoadACH,        // 0xF2
     Di,             // 0xF3
     OrAN8(N8),      // 0xF6
-    // LoadHLSPImm8 // 0xF8
-    // LoadHLSP // 0xF9
-    LoadAA16(A16), // 0xFA
-    Ei,            // 0xfb
+    LoadHLSPN8(N8), // 0xF8
+    LoadHLSP,       // 0xF9
+    LoadAA16(A16),  // 0xFA
+    Ei,             // 0xfb
     // ei // 0xFB
     CpAN8(N8), // 0xFE
 
@@ -506,6 +506,11 @@ impl Display for Instruction {
             Instruction::Ei => write!(f, "ei"),
 
             Instruction::Di => write!(f, "di"),
+
+            Instruction::AddSPN8(n8) => write!(f, "add sp, {}", n8),
+            Instruction::JumpFarHL => write!(f, "jp [hl]"),
+            Instruction::LoadHLSPN8(n8) => write!(f, "ld hl, sp+{}", n8),
+            Instruction::LoadHLSP => write!(f, "ld sp, hl"),
         }
     }
 }
@@ -550,6 +555,10 @@ impl Instruction {
                     0xc4 | 0xCC | 0xd4 | 0xdc => 3, // call cond, imm16
                     0xF3 | 0xFB | 0xD9 => 1,        // ei, di, reti
                     0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => 1, // rst
+                    0xe8 => 2,                      // add sp, imm8
+                    0xe9 => 1,                      // jp [hl]
+                    0xf8 => 2,                      // ld hl, sp+imm8
+                    0xf9 => 1,                      // ld sp, hl
                     0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1, // pop
@@ -657,6 +666,10 @@ impl Instruction {
             Instruction::Rst(tgt3) => {
                 vec![0xc7 | tgt3.as_operand() << 3]
             }
+            Instruction::AddSPN8(n8) => vec![0xE8, *n8],
+            Instruction::JumpFarHL => vec![0xE9],
+            Instruction::LoadHLSPN8(n8) => vec![0xF8, *n8],
+            Instruction::LoadHLSP => vec![0xF9],
         }
     }
 
@@ -737,6 +750,11 @@ impl Instruction {
             Instruction::Set(_, _) => 2,
 
             Instruction::Rst(_) => 1,
+
+            Instruction::AddSPN8(_) => 2,
+            Instruction::JumpFarHL => 1,
+            Instruction::LoadHLSPN8(_) => 2,
+            Instruction::LoadHLSP => 1,
         }
     }
 
@@ -826,6 +844,11 @@ impl Instruction {
             Instruction::Set(_, _) => (8, 8),
 
             Instruction::Rst(_) => (16, 16),
+
+            Instruction::AddSPN8(_) => (16, 16),
+            Instruction::JumpFarHL => (4, 4),
+            Instruction::LoadHLSPN8(_) => (12, 12),
+            Instruction::LoadHLSP => (8, 8),
         }
     }
 
@@ -978,6 +1001,11 @@ impl Instruction {
                 0xF3 => Instruction::Di,
                 0xFb => Instruction::Ei,
                 0xd9 => Instruction::Reti,
+
+                0xe8 => Instruction::AddSPN8(Self::read_u8_helper(buf, addr + 1)),
+                0xe9 => Instruction::JumpFarHL, // jp [hl]
+                0xf8 => Instruction::LoadHLSPN8(Self::read_u8_helper(buf, addr + 1)),
+                0xf9 => Instruction::LoadHLSP, // ld sp, hl
 
                 0xc7 => Instruction::Rst(Tgt3::T0),
                 0xcf => Instruction::Rst(Tgt3::T1),
@@ -1379,6 +1407,23 @@ mod tests {
         assert_eq!(
             Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
             (Instruction::JumpFarCond(Cond::Z, 0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xF8).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xF8, 0x12], 0, 2).unwrap(),
+            (Instruction::LoadHLSPN8(0x12), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0xE9).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xE9], 0, 1).unwrap(),
+            (Instruction::JumpFarHL, 1)
+        );
+        assert_eq!(Instruction::size_header(0xF9).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xF9], 0, 1).unwrap(),
+            (Instruction::LoadHLSP, 1)
         );
     }
 
