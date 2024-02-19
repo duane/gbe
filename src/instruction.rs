@@ -98,10 +98,10 @@ impl R16 {
 impl Display for R16 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16::BC => write!(f, "BC"),
-            R16::DE => write!(f, "DE"),
-            R16::HL => write!(f, "HL"),
-            R16::SP => write!(f, "SP"),
+            R16::BC => write!(f, "bc"),
+            R16::DE => write!(f, "de"),
+            R16::HL => write!(f, "hl"),
+            R16::SP => write!(f, "sp"),
         }
     }
 }
@@ -138,10 +138,10 @@ impl R16Mem {
 impl Display for R16Mem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16Mem::BC => write!(f, "[BC]"),
-            R16Mem::DE => write!(f, "[DE]"),
-            R16Mem::HLInc => write!(f, "[HL+]"),
-            R16Mem::HLDec => write!(f, "[HL-]"),
+            R16Mem::BC => write!(f, "[be]"),
+            R16Mem::DE => write!(f, "[de]"),
+            R16Mem::HLInc => write!(f, "[hl+]"),
+            R16Mem::HLDec => write!(f, "[hl-]"),
         }
     }
 }
@@ -154,21 +154,21 @@ pub enum R8 {
     E,
     H,
     L,
-    HLRef, // (HL)
+    HLRef,
     A,
 }
 
 impl Display for R8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R8::B => write!(f, "B"),
-            R8::C => write!(f, "C"),
-            R8::D => write!(f, "D"),
-            R8::E => write!(f, "E"),
-            R8::H => write!(f, "H"),
-            R8::L => write!(f, "L"),
-            R8::HLRef => write!(f, "(HL)"),
-            R8::A => write!(f, "A"),
+            R8::B => write!(f, "b"),
+            R8::C => write!(f, "c"),
+            R8::D => write!(f, "d"),
+            R8::E => write!(f, "e"),
+            R8::H => write!(f, "h"),
+            R8::L => write!(f, "l"),
+            R8::HLRef => write!(f, "[hl]"),
+            R8::A => write!(f, "a"),
         }
     }
 }
@@ -224,10 +224,10 @@ impl R16Stack {
 impl Display for R16Stack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16Stack::BC => write!(f, "BC"),
-            R16Stack::DE => write!(f, "DE"),
-            R16Stack::HL => write!(f, "HL"),
-            R16Stack::AF => write!(f, "AF"),
+            R16Stack::BC => write!(f, "bc"),
+            R16Stack::DE => write!(f, "de"),
+            R16Stack::HL => write!(f, "hl"),
+            R16Stack::AF => write!(f, "af"),
         }
     }
 }
@@ -264,10 +264,10 @@ impl Cond {
 impl Display for Cond {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Cond::NZ => write!(f, "NZ"),
-            Cond::Z => write!(f, "Z"),
-            Cond::NC => write!(f, "NC"),
-            Cond::C => write!(f, "C"),
+            Cond::NZ => write!(f, "nz"),
+            Cond::Z => write!(f, "z"),
+            Cond::NC => write!(f, "nc"),
+            Cond::C => write!(f, "c"),
         }
     }
 }
@@ -369,49 +369,49 @@ pub enum InstructionError {
 impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Instruction::Nop => write!(f, "NOP"),
-            Instruction::Halt => write!(f, "HALT"),
-            Instruction::StopN8(val) => write!(f, "STOP {:#02x}", val),
+            Instruction::Nop => write!(f, "nop"),
+            Instruction::Halt => write!(f, "halt"),
+            Instruction::StopN8(val) => write!(f, "stop {:#02x}", val),
 
-            Instruction::LoadR16N16(r16, imm16) => write!(f, "LD {}, {}", r16, imm16),
-            Instruction::LoadAR16Mem(r16mem) => write!(f, "LD A, [{}]", r16mem),
-            Instruction::LoadAA16(imm16) => write!(f, "LD A, [{}]", imm16),
-            Instruction::LoadR8N8(r8, imm8) => write!(f, "LD {}, {}", r8, imm8),
-            Instruction::LoadR8R8(r8_dst, r8_src) => write!(f, "LD {}, {}", r8_dst, r8_src),
-            Instruction::LoadACH => write!(f, "LDH A, [C]"),
-            Instruction::LoadAA8H(imm8) => write!(f, "LDH A, [0x{:02x}]", imm8),
+            Instruction::LoadR16N16(r16, imm16) => write!(f, "ld {}, {}", r16, imm16),
+            Instruction::LoadAR16Mem(r16mem) => write!(f, "ld a, [{}]", r16mem),
+            Instruction::LoadAA16(imm16) => write!(f, "ld a, [{}]", imm16),
+            Instruction::LoadR8N8(r8, imm8) => write!(f, "ld {}, {}", r8, imm8),
+            Instruction::LoadR8R8(r8_dst, r8_src) => write!(f, "ld {}, {}", r8_dst, r8_src),
+            Instruction::LoadACH => write!(f, "ldh a, [c]"),
+            Instruction::LoadAA8H(imm8) => write!(f, "ldh a, [0x{:02x}]", imm8),
 
-            Instruction::StoreAA16(imm16) => write!(f, "LD [{}], A", imm16),
-            Instruction::StoreACH => write!(f, "LDH [C], A"),
-            Instruction::StoreAR16Mem(dest) => write!(f, "LD [{}], A", dest),
-            Instruction::StoreAA8H(imm8) => write!(f, "LDH [0x{:02x}], A", imm8),
-            Instruction::StoreSPA16(imm16) => write!(f, "LD [{}], SP", imm16),
+            Instruction::StoreAA16(imm16) => write!(f, "ld [{}], A", imm16),
+            Instruction::StoreACH => write!(f, "ldh [c], a"),
+            Instruction::StoreAR16Mem(dest) => write!(f, "ld [{}], a", dest),
+            Instruction::StoreAA8H(imm8) => write!(f, "ldh [0x{:02x}], a", imm8),
+            Instruction::StoreSPA16(imm16) => write!(f, "ld [{}], sp", imm16),
 
-            Instruction::PushR16Stack(operand) => write!(f, "PUSH {}", operand),
-            Instruction::PopR16Stack(operand) => write!(f, "POP {}", operand),
-            Instruction::CallA16(a16) => write!(f, "CALL {:#04x}", a16),
-            Instruction::CallCondA16(cond, a16) => write!(f, "CALL {}, {:#04x}", cond, a16),
-            Instruction::JumpNear(e8) => write!(f, "JR {:+}", e8),
-            Instruction::JumpNearCond(e8, cond) => write!(f, "JR {}, {:+}", cond, e8),
-            Instruction::Ret => write!(f, "RET"),
-            Instruction::RetCond(cond) => write!(f, "RET {}", cond),
-            Instruction::IncR16(r16) => write!(f, "INC {}", r16),
-            Instruction::IncR8(r8) => write!(f, "INC {}", r8),
-            Instruction::DecR16(r16) => write!(f, "DEC {}", r16),
-            Instruction::DecR8(r8) => write!(f, "DEC {}", r8),
+            Instruction::PushR16Stack(operand) => write!(f, "push {}", operand),
+            Instruction::PopR16Stack(operand) => write!(f, "pop {}", operand),
+            Instruction::CallA16(a16) => write!(f, "call {:#04x}", a16),
+            Instruction::CallCondA16(cond, a16) => write!(f, "call {}, {:#04x}", cond, a16),
+            Instruction::JumpNear(e8) => write!(f, "jr {:+}", e8),
+            Instruction::JumpNearCond(e8, cond) => write!(f, "jr {}, {:+}", cond, e8),
+            Instruction::Ret => write!(f, "ret"),
+            Instruction::RetCond(cond) => write!(f, "ret {}", cond),
+            Instruction::IncR16(r16) => write!(f, "inc {}", r16),
+            Instruction::IncR8(r8) => write!(f, "inc {}", r8),
+            Instruction::DecR16(r16) => write!(f, "dec {}", r16),
+            Instruction::DecR8(r8) => write!(f, "dec {}", r8),
 
-            Instruction::ADDR8(source) => write!(f, "ADD A, {}", source),
-            Instruction::ADCR8(source) => write!(f, "ADC A, {}", source),
-            Instruction::SUBR8(source) => write!(f, "SUB A, {}", source),
-            Instruction::SBCR8(source) => write!(f, "SBC A, {}", source),
-            Instruction::ANDR8(source) => write!(f, "AND A, {}", source),
-            Instruction::XORR8(source) => write!(f, "XOR A, {}", source),
-            Instruction::ORR8(source) => write!(f, "OR A, {}", source),
-            Instruction::CPR8(source) => write!(f, "CP A, {}", source),
+            Instruction::ADDR8(source) => write!(f, "add a, {}", source),
+            Instruction::ADCR8(source) => write!(f, "adc a, {}", source),
+            Instruction::SUBR8(source) => write!(f, "sub a, {}", source),
+            Instruction::SBCR8(source) => write!(f, "sbc a, {}", source),
+            Instruction::ANDR8(source) => write!(f, "and A, {}", source),
+            Instruction::XORR8(source) => write!(f, "xor A, {}", source),
+            Instruction::ORR8(source) => write!(f, "or A, {}", source),
+            Instruction::CPR8(source) => write!(f, "cp A, {}", source),
 
-            Instruction::BIT(b3, r8) => write!(f, "BIT {}, {}", b3, r8),
-            Instruction::RESET(b3, r8) => write!(f, "RES {}, {}", b3, r8),
-            Instruction::SET(b3, r8) => write!(f, "SET {}, {}", b3, r8),
+            Instruction::BIT(b3, r8) => write!(f, "bit {}, {}", b3, r8),
+            Instruction::RESET(b3, r8) => write!(f, "res {}, {}", b3, r8),
+            Instruction::SET(b3, r8) => write!(f, "set {}, {}", b3, r8),
         }
     }
 }
