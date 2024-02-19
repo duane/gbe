@@ -11,6 +11,62 @@ type N16 = u16;
 type E8 = i8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Tgt3 {
+    T0,
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+}
+
+impl Display for Tgt3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Tgt3::T0 => write!(f, "$00"),
+            Tgt3::T1 => write!(f, "$08"),
+            Tgt3::T2 => write!(f, "$10"),
+            Tgt3::T3 => write!(f, "$18"),
+            Tgt3::T4 => write!(f, "$20"),
+            Tgt3::T5 => write!(f, "$28"),
+            Tgt3::T6 => write!(f, "$30"),
+            Tgt3::T7 => write!(f, "$38"),
+        }
+    }
+}
+
+impl Tgt3 {
+    pub fn as_operand(&self) -> u8 {
+        match self {
+            Tgt3::T0 => 0b000,
+            Tgt3::T1 => 0b001,
+            Tgt3::T2 => 0b010,
+            Tgt3::T3 => 0b011,
+            Tgt3::T4 => 0b100,
+            Tgt3::T5 => 0b101,
+            Tgt3::T6 => 0b110,
+            Tgt3::T7 => 0b111,
+        }
+    }
+
+    pub fn from_operand(operand: u8) -> Self {
+        match operand {
+            0b000 => Tgt3::T0,
+            0b001 => Tgt3::T1,
+            0b010 => Tgt3::T2,
+            0b011 => Tgt3::T3,
+            0b100 => Tgt3::T4,
+            0b101 => Tgt3::T5,
+            0b110 => Tgt3::T6,
+            0b111 => Tgt3::T7,
+            _ => unimplemented!("Tgt3::from_operand({:#04x})", operand),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BitRef {
     B0,
     B1,
@@ -313,8 +369,8 @@ pub enum Instruction {
     CallCondA16(Cond, A16), // 0xc4
     PushR16Stack(R16Stack), // 0xC5
     AddAN8(N8),             // 0xC6
-    // rst tgt3 // 0xC7
-    Ret, // 0xc0
+    Rst(Tgt3),              // 0xc6
+    Ret,                    // 0xc0
     // prefix // 0xcb
     CallA16(A16), // 0xcd
     AdcAN8(N8),   // 0xce
@@ -439,6 +495,8 @@ impl Display for Instruction {
             Instruction::Swap(r8) => write!(f, "swap {}", r8),
             Instruction::Srl(r8) => write!(f, "srl {}", r8),
 
+            Instruction::Rst(tgt3) => write!(f, "rst {}", tgt3),
+
             Instruction::Bit(b3, r8) => write!(f, "bit {}, {}", b3, r8),
             Instruction::Res(b3, r8) => write!(f, "res {}, {}", b3, r8),
             Instruction::Set(b3, r8) => write!(f, "set {}, {}", b3, r8),
@@ -484,6 +542,7 @@ impl Instruction {
                     0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
                     0xc4 => 3, // call cond, imm16
+                    0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => 1, // rst
                     0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1, // pop
@@ -584,6 +643,10 @@ impl Instruction {
             Instruction::Set(b3, r8) => {
                 vec![0xCB, 0b11_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
+
+            Instruction::Rst(tgt3) => {
+                vec![0xc7 | tgt3.as_operand() << 3]
+            }
         }
     }
 
@@ -659,6 +722,8 @@ impl Instruction {
             Instruction::Bit(_, _) => 2,
             Instruction::Res(_, _) => 2,
             Instruction::Set(_, _) => 2,
+
+            Instruction::Rst(_) => 1,
         }
     }
 
@@ -743,6 +808,8 @@ impl Instruction {
             Instruction::Bit(_, _) => (8, 8),
             Instruction::Res(_, _) => (8, 8),
             Instruction::Set(_, _) => (8, 8),
+
+            Instruction::Rst(_) => (16, 16),
         }
     }
 
@@ -891,6 +958,15 @@ impl Instruction {
                 0xee => Instruction::XorAN8(Self::read_u8_helper(buf, addr + 1)),
                 0xf6 => Instruction::OrAN8(Self::read_u8_helper(buf, addr + 1)),
                 0xfe => Instruction::CpAN8(Self::read_u8_helper(buf, addr + 1)),
+
+                0xc7 => Instruction::Rst(Tgt3::T0),
+                0xcf => Instruction::Rst(Tgt3::T1),
+                0xd7 => Instruction::Rst(Tgt3::T2),
+                0xdf => Instruction::Rst(Tgt3::T3),
+                0xe7 => Instruction::Rst(Tgt3::T4),
+                0xef => Instruction::Rst(Tgt3::T5),
+                0xf7 => Instruction::Rst(Tgt3::T6),
+                0xff => Instruction::Rst(Tgt3::T7),
 
                 0xc5 => Instruction::PushR16Stack(R16Stack::BC),
                 0xd5 => Instruction::PushR16Stack(R16Stack::DE),
@@ -1191,6 +1267,12 @@ mod tests {
         assert_eq!(
             Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
             (Instruction::RetCond(Cond::NZ), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xdf).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xdf], 0, 1).unwrap(),
+            (Instruction::Rst(Tgt3::T3), 1)
         );
 
         assert_eq!(Instruction::size_header(0xcd).unwrap(), 3);

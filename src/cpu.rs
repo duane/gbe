@@ -146,6 +146,11 @@ impl CPU {
             Instruction::Halt => {
                 self.halted = true;
             }
+            Instruction::Rst(tgt3) => {
+                self.sp -= 2;
+                self.bus.write_u16(self.sp, self.pc)?;
+                self.pc = (tgt3.as_operand() as u16) << 3;
+            }
             Instruction::CallA16(addr) => {
                 self.sp -= 2;
                 self.bus.write_u16(self.sp, self.pc)?;
