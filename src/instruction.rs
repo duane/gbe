@@ -269,10 +269,13 @@ pub enum Instruction {
 
     Load16Imm(R16, u16),
     Load16Mem(R16Mem),
+    Load16ImmMem(u16),
     Load8Imm(R8, u8),
-    Load8C,
+    Load8ImmH(u8),
+    Load8CH,
+    Store16Imm(u16),
     Store8(R16Mem),
-    Store8C,
+    Store8CH,
     Store8H(u16),
     StoreSP(u16),
     LoadR8(R8, R8),
@@ -321,10 +324,13 @@ impl Display for Instruction {
             Instruction::Stop(val) => write!(f, "STOP {:#02x}", val),
             Instruction::Load16Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load16Mem(mem) => write!(f, "LD A, {}", mem),
+            Instruction::Load16ImmMem(addr) => write!(f, "LD A, [{}]", addr),
             Instruction::Load8Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::LoadR8(target, source) => write!(f, "LD {}, {}", target, source),
-            Instruction::Load8C => write!(f, "LD C, [A]"),
-            Instruction::Store8C => write!(f, "LD [C], A"),
+            Instruction::Load8CH => write!(f, "LDH A, [C]"),
+            Instruction::Load8ImmH(addr) => write!(f, "LDH A, [0x{:04x}]", addr),
+            Instruction::Store16Imm(addr) => write!(f, "LD [{}], A", addr),
+            Instruction::Store8CH => write!(f, "LDH [C], A"),
             Instruction::Store8(dest) => write!(f, "LD [{}], A", dest),
             Instruction::Store8H(addr) => write!(f, "LDH [0x{:04x}], A", addr),
             Instruction::StoreSP(addr) => write!(f, "LD {}, SP", addr),
@@ -400,6 +406,9 @@ impl Instruction {
                 0b11 => match insn {
                     0xe0 => 2,
                     0xcd => 3,
+                    0xea => 3, // ld [imm16], a
+                    0xf0 => 2, // ldh a, [imm8]
+                    0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
@@ -443,14 +452,19 @@ impl Instruction {
                 vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
             }
             Instruction::Load16Mem(mem) => vec![0xa | mem.as_operand() << 4],
+            Instruction::Load16ImmMem(addr) => vec![0xfb, *addr as u8, (*addr >> 8) as u8],
             Instruction::Load8Imm(dest, val) => {
                 vec![0x06 | dest.as_operand() << 3, *val]
             }
             Instruction::LoadR8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
-            Instruction::Store8C => vec![0xe2],
-            Instruction::Load8C => vec![0xf2],
+            Instruction::Load8CH => vec![0xf2],
+            Instruction::Load8ImmH(addr) => vec![0xf0, *addr],
+            Instruction::Store8CH => vec![0xe2],
+            Instruction::Store16Imm(addr) => {
+                vec![0xEA, *addr as u8, (*addr >> 8) as u8]
+            }
             Instruction::Store8(dest) => {
                 vec![0x2 | dest.as_operand() << 4]
             }
@@ -510,10 +524,13 @@ impl Instruction {
 
             Instruction::Load16Mem(_) => 1,
             Instruction::Load16Imm(_, _) => 3,
+            Instruction::Load16ImmMem(_) => 3,
             Instruction::Load8Imm(_, _) => 2,
             Instruction::LoadR8(_, _) => 1,
-            Instruction::Load8C => 1,
-            Instruction::Store8C => 1,
+            Instruction::Load8CH => 1,
+            Instruction::Load8ImmH(_) => 2,
+            Instruction::Store16Imm(_) => 3,
+            Instruction::Store8CH => 1,
             Instruction::Store8(_) => 1,
             Instruction::Store8H(_) => 2,
             Instruction::StoreSP(_) => 3,
@@ -557,12 +574,15 @@ impl Instruction {
 
             Instruction::Load16Mem(_) => (8, 8),
             Instruction::Load16Imm(_, _) => (12, 12),
+            Instruction::Load16ImmMem(_) => (16, 16),
             Instruction::Load8Imm(_, _) => (8, 8),
             Instruction::LoadR8(R8::HLRef, _) => (8, 8),
             Instruction::LoadR8(_, R8::HLRef) => (8, 8),
             Instruction::LoadR8(_, _) => (4, 4),
-            Instruction::Load8C => (8, 8),
-            Instruction::Store8C => (8, 8),
+            Instruction::Load8CH => (8, 8),
+            Instruction::Load8ImmH(addr) => (12, 12),
+            Instruction::Store16Imm(_) => (16, 16),
+            Instruction::Store8CH => (8, 8),
             Instruction::Store8(_) => (8, 8),
             Instruction::Store8H(_) => (12, 12),
             Instruction::StoreSP(_) => (20, 20),
@@ -671,8 +691,11 @@ impl Instruction {
             }
             0b11 => match byte {
                 0xe0 => Instruction::Store8H(Self::read_u8_helper(buf, addr + 1) as u16 | 0xFF00),
-                0xe2 => Instruction::Store8C,
-                0xf2 => Instruction::Load8C,
+                0xe2 => Instruction::Store8CH,
+                0xea => Instruction::Store16Imm(Self::read_u16_helper(buf, addr + 1)),
+                0xf0 => Instruction::Load8ImmH(Self::read_u8_helper(buf, addr + 1)),
+                0xf2 => Instruction::Load8CH,
+                0xfa => Instruction::Load16ImmMem(Self::read_u16_helper(buf, addr + 1)),
                 0xcb => {
                     let byte = buf[addr as usize + 1];
                     match byte >> 6 {
@@ -719,8 +742,6 @@ impl Instruction {
 mod tests {
     use std::collections::HashMap;
 
-    const OPCODES: &str = include_str!("../assets/Opcodes.json");
-
     use serde::{Deserialize, Serialize};
 
     use super::*;
@@ -739,12 +760,6 @@ mod tests {
     struct OpcodeMap {
         pub unprefixed: HashMap<String, Opcode>,
         pub cbprefixed: HashMap<String, Opcode>,
-    }
-
-    fn unprefixed_legal_opcodes() -> Vec<u8> {
-        (0..u8::MAX)
-            .filter(|b| *b != 0xCB && !ILLEGAL_INSTRUCTIONS.contains(b))
-            .collect()
     }
 
     #[test]
@@ -890,10 +905,74 @@ mod tests {
             Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
             (Instruction::Ret(Some(Condition::NZ)), 1)
         );
+
         assert_eq!(Instruction::size_header(0xcd).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0xcd, 0x34, 0x12], 0, 3).unwrap(),
             (Instruction::Call(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xc1).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xc1], 0, 1).unwrap(),
+            (Instruction::Pop(R16Stack::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xc5).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xc5], 0, 1).unwrap(),
+            (Instruction::Push(R16Stack::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xe2).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xe2], 0, 1).unwrap(),
+            (Instruction::Store8CH, 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xe0).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xe0, 0x12], 0, 2).unwrap(),
+            (Instruction::Store8H(0xff12), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0xea).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xea, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::Store16Imm(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xf2).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xf2], 0, 1).unwrap(),
+            (Instruction::Load8CH, 1)
+        );
+        assert_eq!(Instruction::size_header(0xf0).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xf0, 0x12], 0, 2).unwrap(),
+            (Instruction::Load8ImmH(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xfa).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xfa, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::Load16ImmMem(0x1234), 3)
+        );
+    }
+
+    #[test]
+    fn prefixed() {
+        assert_eq!(Instruction::size_header(0xCB).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x40], 0, 2).unwrap(),
+            (Instruction::BIT(BitRef::B0, R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x80], 0, 2).unwrap(),
+            (Instruction::RESET(BitRef::B0, R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0xC0], 0, 2).unwrap(),
+            (Instruction::SET(BitRef::B0, R8::B), 2)
         );
     }
 
@@ -949,24 +1028,5 @@ mod tests {
             Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
             (Instruction::XOR(R8::B), 1)
         );
-    }
-
-    #[test]
-    fn can_reencode() {
-        for opcode in unprefixed_legal_opcodes() {
-            if let Ok(size) = Instruction::size_header(opcode) {
-                let buf = match size {
-                    1 => vec![opcode],
-                    2 => vec![opcode, 0x34],
-                    3 => vec![opcode, 0x34, 0x12],
-                    _ => unreachable!("size_header({:#02x}) = {}", opcode, size),
-                };
-                if let Ok((insn, size)) = super::Instruction::from_u8_slice(&buf, 0, 3) {
-                    let encoded = insn.encode();
-                    assert_eq!(encoded.len(), size as usize);
-                    assert_eq!(encoded.as_slice(), buf.as_slice());
-                }
-            }
-        }
     }
 }

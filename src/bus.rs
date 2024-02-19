@@ -1,6 +1,6 @@
 use crate::apu::APU;
 use crate::mem_layout::*;
-use crate::ppu::{self, PPU};
+use crate::ppu::PPU;
 use crate::rom::ROM;
 use crate::serial::SerialOut;
 

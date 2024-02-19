@@ -200,6 +200,9 @@ impl CPU {
                 R16::HL => self.hl.hl = val,
                 R16::SP => self.sp = val,
             },
+            Instruction::Load16ImmMem(addr) => {
+                self.af.single.a = self.bus.read_u8(addr)?;
+            }
             Instruction::Load8Imm(reg, val) => match reg {
                 R8::A => self.af.single.a = val,
                 R8::B => self.bc.single.b = val,
@@ -234,10 +237,16 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, read_byte)?,
                 };
             },
-            Instruction::Load8C => unsafe {
+            Instruction::Load8CH => unsafe {
                 self.af.single.a = self.bus.read_u8(0xff00 + self.bc.single.c as u16)?;
             },
-            Instruction::Store8C => unsafe {
+            Instruction::Load8ImmH(addr) => {
+                self.af.single.a = self.bus.read_u8(addr as u16 + 0xff00)?;
+            }
+            Instruction::Store16Imm(addr) => unsafe {
+                self.bus.write_u8(addr, self.af.single.a)?;
+            },
+            Instruction::Store8CH => unsafe {
                 self.bus
                     .write_u8(0xff00 + self.bc.single.c as u16, self.af.single.a)?;
             },

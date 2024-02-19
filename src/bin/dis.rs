@@ -1,6 +1,3 @@
-use std::env::args;
-
-use bevy::ecs::system::In;
 use gbc::instruction::{Instruction, InstructionError};
 
 fn main() {
