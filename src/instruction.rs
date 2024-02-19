@@ -515,8 +515,27 @@ impl Display for Instruction {
     }
 }
 
+const OPCODE_SIZE_LOOKUP: [u8; 256] = [
+    1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1, 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+    2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1, 1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1,
+    2, 1, 1, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1, 2, 1, 1, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1,
+];
+
 impl Instruction {
-    pub fn size_header(insn: u8) -> Result<u8, InstructionError> {
+    pub fn size_header(opcode: u8) -> Result<u8, InstructionError> {
+        let size = OPCODE_SIZE_LOOKUP[opcode as usize];
+        if size == 0 {
+            return Err(InstructionError::Illegal(opcode).into());
+        }
+        Ok(size)
+    }
+
+    pub fn size_header_2(insn: u8) -> Result<u8, InstructionError> {
         if ILLEGAL_INSTRUCTIONS.contains(&insn) {
             return Err(InstructionError::Illegal(insn).into());
         }
@@ -569,7 +588,6 @@ impl Instruction {
                 _ => return Err(InstructionError::Unknown(insn).into()),
             }
         };
-        // println!("size_header({:#02x}) = {}", insn, size);
         Ok(size)
     }
 
@@ -583,7 +601,7 @@ impl Instruction {
             Instruction::Ei => vec![0xFB],
             Instruction::CallA16(a16) => vec![0xcd, *a16 as u8, (*a16 >> 8) as u8],
             Instruction::CallCondA16(cond, a16) => {
-                vec![0xc4 | cond.as_operand(), *a16 as u8, (*a16 >> 8) as u8]
+                vec![0xc4 | cond.as_operand() << 3, *a16 as u8, (*a16 >> 8) as u8]
             }
             Instruction::JumpNear(e8) => vec![0x18, *e8 as u8],
             Instruction::JumpNearCond(cond, e8) => vec![0x20 | cond.as_operand() << 3, *e8 as u8],
@@ -597,7 +615,7 @@ impl Instruction {
                 vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
             }
             Instruction::LoadAR16Mem(mem) => vec![0xa | mem.as_operand() << 4],
-            Instruction::LoadAA16(addr) => vec![0xfb, *addr as u8, (*addr >> 8) as u8],
+            Instruction::LoadAA16(addr) => vec![0xfa, *addr as u8, (*addr >> 8) as u8],
             Instruction::LoadR8N8(dest, val) => vec![0x06 | dest.as_operand() << 3, *val],
             Instruction::LoadR8R8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
@@ -644,14 +662,14 @@ impl Instruction {
             Instruction::Scf => vec![0x37],
             Instruction::Ccf => vec![0x3F],
 
-            Instruction::Rlc(r8) => vec![0xCB, 0x0 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rrc(r8) => vec![0xCB, 0x1 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rl(r8) => vec![0xCB, 0x2 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rr(r8) => vec![0xCB, 0x3 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Sla(r8) => vec![0xCB, 0x4 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Sra(r8) => vec![0xCB, 0x5 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Swap(r8) => vec![0xCB, 0x6 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Srl(r8) => vec![0xCB, 0x7 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rlc(r8) => vec![0xCB, r8.as_operand()],
+            Instruction::Rrc(r8) => vec![0xCB, r8.as_operand() | 0x8],
+            Instruction::Rl(r8) => vec![0xCB, r8.as_operand() | 0x10],
+            Instruction::Rr(r8) => vec![0xCB, r8.as_operand() | 0x18],
+            Instruction::Sla(r8) => vec![0xCB, r8.as_operand() | 0x20],
+            Instruction::Sra(r8) => vec![0xCB, r8.as_operand() | 0x28],
+            Instruction::Swap(r8) => vec![0xCB, r8.as_operand() | 0x30],
+            Instruction::Srl(r8) => vec![0xCB, r8.as_operand() | 0x38],
 
             Instruction::Bit(b3, r8) => {
                 vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
@@ -931,7 +949,7 @@ impl Instruction {
                 }
             },
             0b10 => {
-                let source_operand = R8::from_operand(byte & 0x3);
+                let source_operand = R8::from_operand(byte & 0x7);
                 match byte >> 3 {
                     0x10 => Instruction::AddR8(source_operand),
                     0x11 => Instruction::AdcR8(source_operand),
@@ -973,11 +991,11 @@ impl Instruction {
                             R8::from_operand(byte & 0x7),
                         ),
                         0b10 => Instruction::Res(
-                            BitRef::decode((byte >> 3) >> 0x7),
+                            BitRef::decode((byte >> 3) & 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
                         0b11 => Instruction::Set(
-                            BitRef::decode((byte >> 3) >> 0x7),
+                            BitRef::decode((byte >> 3) & 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
                         _ => return Err(InstructionError::Unknown(byte).into()),
@@ -1530,5 +1548,25 @@ mod tests {
             Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
             (Instruction::XorR8(R8::B), 1)
         );
+    }
+
+    #[test]
+    fn reencode() {
+        let payload = [0x34, 0x12];
+        for opcode in 0..=0xFF {
+            if opcode == 0xCB || ILLEGAL_INSTRUCTIONS.contains(&opcode) {
+                continue;
+            }
+            let size = Instruction::size_header_2(opcode).unwrap() as usize;
+            let buf = &[opcode, payload[0], payload[1]][..size];
+            let (insn, _) = Instruction::from_u8_slice(buf, 0, size).unwrap();
+            let encoded = insn.encode();
+            assert_eq!(encoded, buf);
+        }
+        for opcode in 0..=0xFF {
+            let (insn, _) = Instruction::from_u8_slice(&[0xCB, opcode], 0, 2).unwrap();
+            let encoded = insn.encode();
+            assert_eq!(encoded, [0xCB, opcode]);
+        }
     }
 }

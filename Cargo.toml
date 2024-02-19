@@ -7,6 +7,10 @@ edition = "2021"
 gfx = ["bevy"]
 default = ["gfx"]
 
+[[bin]]
+name = "precompute"
+path = "src/bin/precompute.rs"
+required-features = []
 
 [[bin]]
 name = "dis"
