@@ -178,11 +178,11 @@ impl CPU {
                     self.pc = (self.pc as i32 + offset as i32) as u16;
                 }
             },
-            Instruction::Ret(None) => {
+            Instruction::Ret => {
                 self.pc = self.bus.read_u16(self.sp)?;
                 self.sp += 2;
             }
-            Instruction::Ret(Some(cond)) => unsafe {
+            Instruction::RetCond(cond) => unsafe {
                 let action_taken = match cond {
                     Condition::Z => self.af.single.f & 0x80 == 0x80,
                     Condition::NZ => self.af.single.f & 0x80 != 0x80,
