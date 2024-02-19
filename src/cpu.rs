@@ -164,10 +164,10 @@ impl CPU {
                     self.pc = a16;
                 }
             },
-            Instruction::JumpNear(offset, None) => {
-                self.pc = (self.pc as i32 + offset as i32) as u16;
+            Instruction::JumpNear(e8) => {
+                self.pc = (self.pc as i32 + e8 as i32) as u16;
             }
-            Instruction::JumpNear(offset, Some(cond)) => unsafe {
+            Instruction::JumpNearCond(offset, cond) => unsafe {
                 action_taken = match cond {
                     Condition::Z => self.af.single.f & 0x80 == 0x80,
                     Condition::NZ => self.af.single.f & 0x80 != 0x80,

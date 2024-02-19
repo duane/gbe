@@ -289,9 +289,9 @@ pub enum Instruction {
     // rrca - 0xF
     StopN8(N8), // 0x10
     // RLA - 0x17
-    JumpNear(E8, Option<Condition>), // 0x18
+    JumpNear(E8), // 0x18
     // RRA - 0x1f
-    //     JumpNearCond(E8, Condition), // 0x20
+    JumpNearCond(E8, Condition), // 0x20
     // daa - 0x27
     // cpl - 0x2f
     // scf - 0x37
@@ -391,15 +391,8 @@ impl Display for Instruction {
             Instruction::PopR16Stack(operand) => write!(f, "POP {}", operand),
             Instruction::CallA16(a16) => write!(f, "CALL {:#04x}", a16),
             Instruction::CallCondA16(cond, a16) => write!(f, "CALL {}, {:#04x}", cond, a16),
-            Instruction::JumpNear(e8, cond) => write!(
-                f,
-                "JR {}{:+}",
-                match cond {
-                    Some(cond) => format!("{}, ", cond),
-                    None => "".to_string(),
-                },
-                e8
-            ),
+            Instruction::JumpNear(e8) => write!(f, "JR {:+}", e8),
+            Instruction::JumpNearCond(e8, cond) => write!(f, "JR {}, {:+}", cond, e8),
             Instruction::Ret => write!(f, "RET"),
             Instruction::RetCond(cond) => write!(f, "RET {}", cond),
             Instruction::IncR16(r16) => write!(f, "INC {}", r16),
@@ -480,8 +473,8 @@ impl Instruction {
             Instruction::CallCondA16(cond, a16) => {
                 vec![0xc4 | cond.as_operand(), *a16 as u8, (*a16 >> 8) as u8]
             }
-            Instruction::JumpNear(e8, None) => vec![0x18, *e8 as u8],
-            Instruction::JumpNear(e8, Some(cond)) => {
+            Instruction::JumpNear(e8) => vec![0x18, *e8 as u8],
+            Instruction::JumpNearCond(e8, cond) => {
                 let cond = match cond {
                     Condition::NZ => 0b00,
                     Condition::Z => 0b01,
@@ -572,7 +565,8 @@ impl Instruction {
             Instruction::StopN8(_) => 2,
             Instruction::CallA16(_) => 3,
             Instruction::CallCondA16(_, _) => 3,
-            Instruction::JumpNear(_, _) => 2,
+            Instruction::JumpNear(_) => 2,
+            Instruction::JumpNearCond(_, _) => 2,
             Instruction::Ret => 1,
             Instruction::RetCond(_) => 1,
 
@@ -623,7 +617,8 @@ impl Instruction {
             Instruction::StopN8(_) => (4, 4),
             Instruction::CallA16(_) => (24, 24),
             Instruction::CallCondA16(_, _) => (24, 12),
-            Instruction::JumpNear(_, _) => (12, 8),
+            Instruction::JumpNear(_) => (12, 8),
+            Instruction::JumpNearCond(_, _) => (12, 8),
             Instruction::Ret => (16, 16),
             Instruction::RetCond(_) => (20, 8),
 
@@ -705,11 +700,11 @@ impl Instruction {
                 _ => match byte & 0x7 {
                     0x0 => {
                         if byte & 0b0010_0000 == 0 {
-                            Instruction::JumpNear(Self::read_u8_helper(buf, addr + 1) as i8, None)
+                            Instruction::JumpNear(Self::read_u8_helper(buf, addr + 1) as i8)
                         } else {
-                            Instruction::JumpNear(
+                            Instruction::JumpNearCond(
                                 Self::read_u8_helper(buf, addr + 1) as i8,
-                                Some(Condition::from_operand((byte >> 3) & 0x3)),
+                                Condition::from_operand((byte >> 3) & 0x3),
                             )
                         }
                     }
@@ -879,10 +874,15 @@ mod tests {
             (Instruction::LoadR8N8(R8::B, 0x34), 2)
         );
 
+        assert_eq!(Instruction::size_header(0x18).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x18, 0x34], 0, 2).unwrap(),
+            (Instruction::JumpNear(0x34), 2)
+        );
         assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
-            (Instruction::JumpNear(0x34, Some(Condition::C)), 2)
+            (Instruction::JumpNearCond(0x34, Condition::C), 2)
         );
 
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
