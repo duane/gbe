@@ -212,7 +212,7 @@ impl CPU {
                     self.bus.write_u8(self.hl.hl, val)?;
                 },
             },
-            Instruction::Load8(dst, src) => unsafe {
+            Instruction::LoadR8(dst, src) => unsafe {
                 let read_byte = match src {
                     R8::A => self.af.single.a,
                     R8::B => self.bc.single.b,

@@ -275,7 +275,7 @@ pub enum Instruction {
     Store8C,
     Store8H(u16),
     StoreSP(u16),
-    Load8(R8, R8),
+    LoadR8(R8, R8),
     Push(R16Stack),
     Pop(R16Stack),
 
@@ -322,7 +322,7 @@ impl Display for Instruction {
             Instruction::Load16Imm(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load16Mem(mem) => write!(f, "LD A, {}", mem),
             Instruction::Load8Imm(target, source) => write!(f, "LD {}, {}", target, source),
-            Instruction::Load8(target, source) => write!(f, "LD {}, {}", target, source),
+            Instruction::LoadR8(target, source) => write!(f, "LD {}, {}", target, source),
             Instruction::Load8C => write!(f, "LD C, [A]"),
             Instruction::Store8C => write!(f, "LD [C], A"),
             Instruction::Store8(dest) => write!(f, "LD [{}], A", dest),
@@ -395,6 +395,7 @@ impl Instruction {
                         _ => return Err(InstructionError::Unknown(insn).into()),
                     },
                 },
+                0b01 => 1,
                 0b10 => 1,
                 0b11 => match insn {
                     0xe0 => 2,
@@ -445,7 +446,7 @@ impl Instruction {
             Instruction::Load8Imm(dest, val) => {
                 vec![0x06 | dest.as_operand() << 3, *val]
             }
-            Instruction::Load8(target, source) => {
+            Instruction::LoadR8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
             Instruction::Store8C => vec![0xe2],
@@ -478,14 +479,14 @@ impl Instruction {
                 vec![0x5 | r8.as_operand() << 3]
             }
 
-            Instruction::ADD(source) => vec![0b10_000_000 | source.as_operand()],
-            Instruction::ADC(source) => vec![0b10_001_000 | source.as_operand()],
-            Instruction::SUB(source) => vec![0b10_010_000 | source.as_operand()],
-            Instruction::SBC(source) => vec![0b10_011_000 | source.as_operand()],
-            Instruction::AND(source) => vec![0b10_100_000 | source.as_operand()],
-            Instruction::XOR(source) => vec![0b10_101_000 | source.as_operand()],
-            Instruction::OR(source) => vec![0b10_110_000 | source.as_operand()],
-            Instruction::CP(source) => vec![0b10_111_000 | source.as_operand()],
+            Instruction::ADD(source) => vec![0x10 << 3 | source.as_operand()],
+            Instruction::ADC(source) => vec![0x11 << 3 | source.as_operand()],
+            Instruction::SUB(source) => vec![0x12 << 3 | source.as_operand()],
+            Instruction::SBC(source) => vec![0x13 << 3 | source.as_operand()],
+            Instruction::AND(source) => vec![0x14 << 3 | source.as_operand()],
+            Instruction::XOR(source) => vec![0x15 << 3 | source.as_operand()],
+            Instruction::OR(source) => vec![0x16 << 3 | source.as_operand()],
+            Instruction::CP(source) => vec![0x17 << 3 | source.as_operand()],
             Instruction::BIT(b3, r8) => {
                 vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
@@ -510,7 +511,7 @@ impl Instruction {
             Instruction::Load16Mem(_) => 1,
             Instruction::Load16Imm(_, _) => 3,
             Instruction::Load8Imm(_, _) => 2,
-            Instruction::Load8(_, _) => 1,
+            Instruction::LoadR8(_, _) => 1,
             Instruction::Load8C => 1,
             Instruction::Store8C => 1,
             Instruction::Store8(_) => 1,
@@ -557,9 +558,9 @@ impl Instruction {
             Instruction::Load16Mem(_) => (8, 8),
             Instruction::Load16Imm(_, _) => (12, 12),
             Instruction::Load8Imm(_, _) => (8, 8),
-            Instruction::Load8(R8::HLRef, _) => (8, 8),
-            Instruction::Load8(_, R8::HLRef) => (8, 8),
-            Instruction::Load8(_, _) => (4, 4),
+            Instruction::LoadR8(R8::HLRef, _) => (8, 8),
+            Instruction::LoadR8(_, R8::HLRef) => (8, 8),
+            Instruction::LoadR8(_, _) => (4, 4),
             Instruction::Load8C => (8, 8),
             Instruction::Store8C => (8, 8),
             Instruction::Store8(_) => (8, 8),
@@ -651,20 +652,20 @@ impl Instruction {
                 _ => {
                     let target_operand = R8::from_operand((byte >> 3) & 0b111);
                     let source_operand = R8::from_operand(byte & 0b111);
-                    Instruction::Load8(target_operand, source_operand)
+                    Instruction::LoadR8(target_operand, source_operand)
                 }
             },
             0b10 => {
-                let source_operand = R8::from_operand(byte & 0b111);
-                match (byte >> 3) & 0b111 {
-                    0b000 => Instruction::ADD(source_operand),
-                    0b001 => Instruction::ADC(source_operand),
-                    0b010 => Instruction::SUB(source_operand),
-                    0b011 => Instruction::SBC(source_operand),
-                    0b100 => Instruction::AND(source_operand),
-                    0b101 => Instruction::XOR(source_operand),
-                    0b110 => Instruction::OR(source_operand),
-                    0b111 => Instruction::CP(source_operand),
+                let source_operand = R8::from_operand(byte & 0x3);
+                match byte >> 3 {
+                    0x10 => Instruction::ADD(source_operand),
+                    0x11 => Instruction::ADC(source_operand),
+                    0x12 => Instruction::SUB(source_operand),
+                    0x13 => Instruction::SBC(source_operand),
+                    0x14 => Instruction::AND(source_operand),
+                    0x15 => Instruction::XOR(source_operand),
+                    0x16 => Instruction::OR(source_operand),
+                    0x17 => Instruction::CP(source_operand),
                     _ => return Err(InstructionError::Unknown(byte).into()),
                 }
             }
@@ -740,18 +741,160 @@ mod tests {
         pub cbprefixed: HashMap<String, Opcode>,
     }
 
-    fn parse_opcodes() -> OpcodeMap {
-        serde_json::from_str(OPCODES).unwrap()
-    }
-
     fn unprefixed_legal_opcodes() -> Vec<u8> {
         (0..u8::MAX)
             .filter(|b| *b != 0xCB && !ILLEGAL_INSTRUCTIONS.contains(b))
             .collect()
     }
 
-    fn cbprefixed_opcodes() -> Vec<u8> {
-        (0..u8::MAX).collect()
+    #[test]
+    fn block0() {
+        assert_eq!(Instruction::size_header(0x0).unwrap(), 1);
+
+        assert_eq!(Instruction::size_header(0x1).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x1, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::Load16Imm(R16::BC, 0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0x2).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x2], 0, 1).unwrap(),
+            (Instruction::Store8(R16Mem::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xa).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xa], 0, 1).unwrap(),
+            (Instruction::Load16Mem(R16Mem::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x8).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x8, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::StoreSP(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0x3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x3], 0, 1).unwrap(),
+            (Instruction::INC16(R16::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0xb).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xb], 0, 1).unwrap(),
+            (Instruction::DEC16(R16::BC), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x4).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x4], 0, 1).unwrap(),
+            (Instruction::INC8(R8::B), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x5).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x5], 0, 1).unwrap(),
+            (Instruction::DEC8(R8::B), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x6).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x6, 0x34], 0, 2).unwrap(),
+            (Instruction::Load8Imm(R8::B, 0x34), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
+            (Instruction::JR(0x34, Some(Condition::C)), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x10, 0x34], 0, 2).unwrap(),
+            (Instruction::Stop(0x34), 2)
+        );
+    }
+
+    #[test]
+    fn block1() {
+        assert_eq!(Instruction::size_header(0x40).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x40], 0, 1).unwrap(),
+            (Instruction::LoadR8(R8::B, R8::B), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x76).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x76], 0, 1).unwrap(),
+            (Instruction::Halt, 1)
+        );
+    }
+
+    #[test]
+    fn block2() {
+        assert_eq!(Instruction::size_header(0x10 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x10 << 3], 0, 1).unwrap(),
+            (Instruction::ADD(R8::B), 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x11 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x11 << 3], 0, 1).unwrap(),
+            (Instruction::ADC(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x12 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x12 << 3], 0, 1).unwrap(),
+            (Instruction::SUB(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x13 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x13 << 3], 0, 1).unwrap(),
+            (Instruction::SBC(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x14 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x14 << 3], 0, 1).unwrap(),
+            (Instruction::AND(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x15 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x15 << 3], 0, 1).unwrap(),
+            (Instruction::XOR(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x16 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x16 << 3], 0, 1).unwrap(),
+            (Instruction::OR(R8::B), 1)
+        );
+        assert_eq!(Instruction::size_header(0x17 << 3).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x17 << 3], 0, 1).unwrap(),
+            (Instruction::CP(R8::B), 1)
+        );
+    }
+
+    #[test]
+    fn block3() {
+        assert_eq!(Instruction::size_header(0xc9).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xc9], 0, 1).unwrap(),
+            (Instruction::Ret(None), 1)
+        );
+        assert_eq!(Instruction::size_header(0xc0).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
+            (Instruction::Ret(Some(Condition::NZ)), 1)
+        );
+        assert_eq!(Instruction::size_header(0xcd).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xcd, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::Call(0x1234), 3)
+        );
     }
 
     // regression tests
@@ -800,14 +943,29 @@ mod tests {
     }
 
     #[test]
+    fn xor_b() {
+        assert_eq!(Instruction::size_header(0xa8).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
+            (Instruction::XOR(R8::B), 1)
+        );
+    }
+
+    #[test]
     fn can_reencode() {
-        let mut buf: [u8; 3] = [0x0, 0x34, 0x12];
         for opcode in unprefixed_legal_opcodes() {
-            buf[0] = opcode;
-            if let Ok((insn, size)) = super::Instruction::from_u8_slice(&buf, 0, 3) {
-                let encoded = insn.encode();
-                assert_eq!(encoded.len(), size as usize);
-                assert_eq!(encoded, buf[0..size as usize].to_vec());
+            if let Ok(size) = Instruction::size_header(opcode) {
+                let buf = match size {
+                    1 => vec![opcode],
+                    2 => vec![opcode, 0x34],
+                    3 => vec![opcode, 0x34, 0x12],
+                    _ => unreachable!("size_header({:#02x}) = {}", opcode, size),
+                };
+                if let Ok((insn, size)) = super::Instruction::from_u8_slice(&buf, 0, 3) {
+                    let encoded = insn.encode();
+                    assert_eq!(encoded.len(), size as usize);
+                    assert_eq!(encoded.as_slice(), buf.as_slice());
+                }
             }
         }
     }
