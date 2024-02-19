@@ -274,40 +274,40 @@ impl Display for Cond {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Instruction {
-    Nop,                  // 0x0
-    LoadR16N16(R16, N16), // 0x1
-    StoreAR16Mem(R16Mem), // 0x2
-    IncR16(R16),          // 0x3
-    IncR8(R8),            // 0x4
-    DecR8(R8),            // 0x5
-    LoadR8N8(R8, N8),     // 0x6
-    // rlca - 0x7
-    StoreSPA16(A16), // 0x8
-    // ADDHLR16 - 0x9
-    LoadAR16Mem(R16Mem), // 0xA
-    DecR16(R16),         // 0xB
-    // rrca - 0xF
-    StopN8(N8), // 0x10
-    // RLA - 0x17
-    JumpNear(E8), // 0x18
-    // RRA - 0x1f
+    Nop,                    // 0x0
+    LoadR16N16(R16, N16),   // 0x1
+    StoreAR16Mem(R16Mem),   // 0x2
+    IncR16(R16),            // 0x3
+    IncR8(R8),              // 0x4
+    DecR8(R8),              // 0x5
+    LoadR8N8(R8, N8),       // 0x6
+    RlcA,                   // 0x7
+    StoreSPA16(A16),        // 0x8
+    AddHLR16(R16),          // 0x9
+    LoadAR16Mem(R16Mem),    // 0xA
+    DecR16(R16),            // 0xB
+    RrcA,                   // 0xF
+    StopN8(N8),             // 0x10
+    RlA,                    // 0x17
+    JumpNear(E8),           // 0x18
+    RrA,                    // 0x1F
     JumpNearCond(E8, Cond), // 0x20
-    // daa - 0x27
-    // cpl - 0x2f
-    // scf - 0x37
-    // ccf - 0x3f
-    LoadR8R8(R8, R8),      // 0x40
-    Halt,                  // 0x76
-    AddR8(R8),             // 0x80
-    AdcR8(R8),             // 0x88
-    SubR8(R8),             // 0x90
-    SbcR8(R8),             // 0x98
-    AndR8(R8),             // 0xA0
-    XorR8(R8),             // 0xA8
-    OrR8(R8),              // 0xB0
-    CpR8(R8),              // 0xB8
-    RetCond(Cond),         // 0xc0
-    PopR16Stack(R16Stack), // 0xc1
+    Daa,                    // 0x27
+    Cpl,                    // 0x2f
+    Scf,                    // 0x37
+    Ccf,                    // 0x3f
+    LoadR8R8(R8, R8),       // 0x40
+    Halt,                   // 0x76
+    AddR8(R8),              // 0x80
+    AdcR8(R8),              // 0x88
+    SubR8(R8),              // 0x90
+    SbcR8(R8),              // 0x98
+    AndR8(R8),              // 0xA0
+    XorR8(R8),              // 0xA8
+    OrR8(R8),               // 0xB0
+    CpR8(R8),               // 0xB8
+    RetCond(Cond),          // 0xc0
+    PopR16Stack(R16Stack),  // 0xc1
     // jp cond // 0xC2
     // jp // 0xc3
     CallCondA16(Cond, A16), // 0xc4
@@ -399,6 +399,7 @@ impl Display for Instruction {
             Instruction::IncR8(r8) => write!(f, "inc {}", r8),
             Instruction::DecR16(r16) => write!(f, "dec {}", r16),
             Instruction::DecR8(r8) => write!(f, "dec {}", r8),
+            Instruction::AddHLR16(r16) => write!(f, "add hl, {}", r16),
 
             Instruction::AddR8(source) => write!(f, "add a, {}", source),
             Instruction::AdcR8(source) => write!(f, "adc a, {}", source),
@@ -408,6 +409,15 @@ impl Display for Instruction {
             Instruction::XorR8(source) => write!(f, "xor A, {}", source),
             Instruction::OrR8(source) => write!(f, "or A, {}", source),
             Instruction::CpR8(source) => write!(f, "cp A, {}", source),
+
+            Instruction::RlcA => write!(f, "rlc a"),
+            Instruction::RrcA => write!(f, "rrc a"),
+            Instruction::RlA => write!(f, "rl a"),
+            Instruction::RrA => write!(f, "rr a"),
+            Instruction::Daa => write!(f, "daa"),
+            Instruction::Cpl => write!(f, "cpl"),
+            Instruction::Scf => write!(f, "scf"),
+            Instruction::Ccf => write!(f, "ccf"),
 
             Instruction::Rlc(r8) => write!(f, "rlc {}", r8),
             Instruction::Rrc(r8) => write!(f, "rrc {}", r8),
@@ -443,6 +453,8 @@ impl Instruction {
                     0x8 if insn == 0x8 => 3,  // LD [imm16], SP
                     0xa => 1,                 // LD A, [r16mem]
                     0xb => 1,                 // DEC r16
+                    0x9 => 1,                 // ADD HL, r16
+                    0x7 | 0xf => 1,
                     _ => match insn & 0x7 {
                         0x0 => 2, // JR e8
                         0x4 => 1, // INC r8
@@ -507,45 +519,24 @@ impl Instruction {
             }
             Instruction::LoadAR16Mem(mem) => vec![0xa | mem.as_operand() << 4],
             Instruction::LoadAA16(addr) => vec![0xfb, *addr as u8, (*addr >> 8) as u8],
-            Instruction::LoadR8N8(dest, val) => {
-                vec![0x06 | dest.as_operand() << 3, *val]
-            }
+            Instruction::LoadR8N8(dest, val) => vec![0x06 | dest.as_operand() << 3, *val],
             Instruction::LoadR8R8(target, source) => {
                 vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
             }
             Instruction::LoadACH => vec![0xf2],
             Instruction::LoadAA8H(addr) => vec![0xf0, *addr],
             Instruction::StoreACH => vec![0xe2],
-            Instruction::StoreAA16(addr) => {
-                vec![0xEA, *addr as u8, (*addr >> 8) as u8]
-            }
-            Instruction::StoreAR16Mem(dest) => {
-                vec![0x2 | dest.as_operand() << 4]
-            }
-            Instruction::StoreAA8H(addr) => {
-                vec![0xe0, (*addr & 0xff) as u8]
-            }
-            Instruction::StoreSPA16(imm16) => {
-                vec![0x08, *imm16 as u8, (*imm16 >> 8) as u8]
-            }
-            Instruction::PushR16Stack(operand) => {
-                vec![operand.as_operand() << 4 | 0b11_000_101]
-            }
-            Instruction::PopR16Stack(operand) => {
-                vec![operand.as_operand() << 4 | 0b11_000_001]
-            }
-            Instruction::IncR16(r16) => {
-                vec![0x3 | r16.as_operand() << 4]
-            }
-            Instruction::IncR8(r8) => {
-                vec![0x4 | r8.as_operand() << 3]
-            }
-            Instruction::DecR16(r16) => {
-                vec![0xb | r16.as_operand() << 4]
-            }
-            Instruction::DecR8(r8) => {
-                vec![0x5 | r8.as_operand() << 3]
-            }
+            Instruction::StoreAA16(addr) => vec![0xEA, *addr as u8, (*addr >> 8) as u8],
+            Instruction::StoreAR16Mem(dest) => vec![0x2 | dest.as_operand() << 4],
+            Instruction::StoreAA8H(addr) => vec![0xe0, (*addr & 0xff) as u8],
+            Instruction::StoreSPA16(imm16) => vec![0x08, *imm16 as u8, (*imm16 >> 8) as u8],
+            Instruction::PushR16Stack(operand) => vec![operand.as_operand() << 4 | 0b11_000_101],
+            Instruction::PopR16Stack(operand) => vec![operand.as_operand() << 4 | 0b11_000_001],
+            Instruction::IncR16(r16) => vec![0x3 | r16.as_operand() << 4],
+            Instruction::IncR8(r8) => vec![0x4 | r8.as_operand() << 3],
+            Instruction::DecR16(r16) => vec![0xb | r16.as_operand() << 4],
+            Instruction::DecR8(r8) => vec![0x5 | r8.as_operand() << 3],
+            Instruction::AddHLR16(r16) => vec![0x9 | r16.as_operand() << 4],
 
             Instruction::AddR8(source) => vec![0x10 << 3 | source.as_operand()],
             Instruction::AdcR8(source) => vec![0x11 << 3 | source.as_operand()],
@@ -555,14 +546,24 @@ impl Instruction {
             Instruction::XorR8(source) => vec![0x15 << 3 | source.as_operand()],
             Instruction::OrR8(source) => vec![0x16 << 3 | source.as_operand()],
             Instruction::CpR8(source) => vec![0x17 << 3 | source.as_operand()],
-            Instruction::Rlc(r8) => vec![0x0 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rrc(r8) => vec![0x1 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rl(r8) => vec![0x2 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Rr(r8) => vec![0x3 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Sla(r8) => vec![0x4 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Sra(r8) => vec![0x5 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Swap(r8) => vec![0x6 << 6 | r8.as_operand() << 3 | 0b000],
-            Instruction::Srl(r8) => vec![0x7 << 6 | r8.as_operand() << 3 | 0b000],
+
+            Instruction::RlcA => vec![0x07],
+            Instruction::RrcA => vec![0x0F],
+            Instruction::RlA => vec![0x17],
+            Instruction::RrA => vec![0x1F],
+            Instruction::Daa => vec![0x27],
+            Instruction::Cpl => vec![0x2F],
+            Instruction::Scf => vec![0x37],
+            Instruction::Ccf => vec![0x3F],
+
+            Instruction::Rlc(r8) => vec![0xCB, 0x0 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rrc(r8) => vec![0xCB, 0x1 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rl(r8) => vec![0xCB, 0x2 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rr(r8) => vec![0xCB, 0x3 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Sla(r8) => vec![0xCB, 0x4 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Sra(r8) => vec![0xCB, 0x5 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Swap(r8) => vec![0xCB, 0x6 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Srl(r8) => vec![0xCB, 0x7 << 6 | r8.as_operand() << 3 | 0b000],
 
             Instruction::Bit(b3, r8) => {
                 vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
@@ -607,6 +608,7 @@ impl Instruction {
             Instruction::IncR8(_) => 1,
             Instruction::DecR16(_) => 1,
             Instruction::DecR8(_) => 1,
+            Instruction::AddHLR16(_) => 1,
 
             Instruction::AddR8(_) => 1,
             Instruction::AdcR8(_) => 1,
@@ -616,6 +618,15 @@ impl Instruction {
             Instruction::XorR8(_) => 1,
             Instruction::OrR8(_) => 1,
             Instruction::CpR8(_) => 1,
+
+            Instruction::RlcA => 1,
+            Instruction::RrcA => 1,
+            Instruction::RlA => 1,
+            Instruction::RrA => 1,
+            Instruction::Daa => 1,
+            Instruction::Cpl => 1,
+            Instruction::Scf => 1,
+            Instruction::Ccf => 1,
 
             Instruction::Rlc(_) => 2,
             Instruction::Rrc(_) => 2,
@@ -670,6 +681,7 @@ impl Instruction {
             Instruction::IncR8(_) => (4, 4),
             Instruction::DecR16(_) => (8, 8),
             Instruction::DecR8(_) => (4, 4),
+            Instruction::AddHLR16(_) => (12, 12),
 
             Instruction::AddR8(_) => (4, 4),
             Instruction::AdcR8(_) => (4, 4),
@@ -679,6 +691,15 @@ impl Instruction {
             Instruction::XorR8(_) => (4, 4),
             Instruction::OrR8(_) => (4, 4),
             Instruction::CpR8(_) => (4, 4),
+
+            Instruction::RlcA => (4, 4),
+            Instruction::RrcA => (4, 4),
+            Instruction::RlA => (4, 4),
+            Instruction::RrA => (4, 4),
+            Instruction::Daa => (4, 4),
+            Instruction::Cpl => (4, 4),
+            Instruction::Scf => (4, 4),
+            Instruction::Ccf => (4, 4),
 
             Instruction::Rlc(_) => (8, 8),
             Instruction::Rrc(_) => (8, 8),
@@ -733,6 +754,18 @@ impl Instruction {
                 0x8 if byte == 0x8 => Instruction::StoreSPA16(Self::read_u16_helper(buf, addr + 1)),
                 0xa => Instruction::LoadAR16Mem(R16Mem::from_operand(byte >> 4 & 0xf)),
                 0xb => Instruction::DecR16(R16::from_operand(byte >> 4 & 0x3)),
+                0x9 => Instruction::AddHLR16(R16::from_operand(byte >> 4 & 0x3)),
+                0x7 | 0xf => match byte >> 3 {
+                    0x0 => Instruction::RlcA,
+                    0x1 => Instruction::RrcA,
+                    0x2 => Instruction::RlA,
+                    0x3 => Instruction::RrA,
+                    0x4 => Instruction::Daa,
+                    0x5 => Instruction::Cpl,
+                    0x6 => Instruction::Scf,
+                    0x7 => Instruction::Ccf,
+                    _ => return Err(InstructionError::Unknown(byte).into()),
+                },
                 _ => match byte & 0x7 {
                     0x0 => {
                         if byte & 0b0010_0000 == 0 {
@@ -869,6 +902,53 @@ mod tests {
     #[test]
     fn block0() {
         assert_eq!(Instruction::size_header(0x0).unwrap(), 1);
+
+        assert_eq!(Instruction::size_header(0x7).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x7], 0, 1).unwrap(),
+            (Instruction::RlcA, 1)
+        );
+        assert_eq!(Instruction::size_header(0xF).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xF], 0, 1).unwrap(),
+            (Instruction::RrcA, 1)
+        );
+        assert_eq!(Instruction::size_header(0x17).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x17], 0, 1).unwrap(),
+            (Instruction::RlA, 1)
+        );
+        assert_eq!(Instruction::size_header(0x1F).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x1F], 0, 1).unwrap(),
+            (Instruction::RrA, 1)
+        );
+        assert_eq!(Instruction::size_header(0x27).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x27], 0, 1).unwrap(),
+            (Instruction::Daa, 1)
+        );
+        assert_eq!(Instruction::size_header(0x2F).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x2F], 0, 1).unwrap(),
+            (Instruction::Cpl, 1)
+        );
+        assert_eq!(Instruction::size_header(0x37).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x37], 0, 1).unwrap(),
+            (Instruction::Scf, 1)
+        );
+        assert_eq!(Instruction::size_header(0x3F).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x3F], 0, 1).unwrap(),
+            (Instruction::Ccf, 1)
+        );
+
+        assert_eq!(Instruction::size_header(0x9).unwrap(), 1);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0x9], 0, 1).unwrap(),
+            (Instruction::AddHLR16(R16::BC), 1)
+        );
 
         assert_eq!(Instruction::size_header(0x1).unwrap(), 3);
         assert_eq!(

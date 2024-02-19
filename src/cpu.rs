@@ -370,6 +370,22 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
+
+            Instruction::AddHLR16(r16) => unsafe {
+                let hl = self.hl.hl;
+                let r16_val = match r16 {
+                    R16::BC => self.bc.bc,
+                    R16::DE => self.de.de,
+                    R16::HL => self.hl.hl,
+                    R16::SP => self.sp,
+                };
+                let result = hl.wrapping_add(r16_val);
+                let h = (hl & 0xfff) + (r16_val & 0xfff) > 0xfff;
+                let c = hl > u16::MAX - r16_val;
+                self.af.single.f = (h as u8) << 5 | (c as u8) << 4 | self.af.single.f & 0x8f;
+                self.hl.hl = result;
+            },
+
             Instruction::AddR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let b = match reg {
@@ -527,6 +543,83 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
+            },
+
+            Instruction::RlcA => unsafe {
+                let val = self.af.single.a;
+                let c = val & 0x80 == 0x80;
+                let result = (val << 1) | (c as u8);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::RrcA => unsafe {
+                let val = self.af.single.a;
+                let c = val & 0x1 == 0x1;
+                let result = (val >> 1) | ((c as u8) << 7);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::RlA => unsafe {
+                let val = self.af.single.a;
+                let c = val & 0x80 == 0x80;
+                let result = (val << 1) | ((self.af.single.f & 0x10) >> 4);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::RrA => unsafe {
+                let val = self.af.single.a;
+                let c = val & 0x1 == 0x1;
+                let result = (val >> 1) | ((self.af.single.f & 0x10) << 3);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::Daa => unsafe {
+                let mut a = self.af.single.a;
+                let mut adjust = 0;
+                if self.af.single.f & 0x20 == 0x20 {
+                    adjust |= 0x60;
+                }
+                if self.af.single.f & 0x10 == 0x10 || (a & 0xf) > 9 {
+                    adjust |= 0x6;
+                }
+                if self.af.single.f & 0x40 == 0x40 || a > 0x99 {
+                    adjust |= 0x60;
+                    self.af.single.f |= 0x10;
+                }
+                a = a.wrapping_add(adjust);
+                self.af.single.f &= 0x40;
+                if a == 0 {
+                    self.af.single.f |= 0x80;
+                }
+                self.af.single.a = a;
+            },
+            Instruction::Cpl => unsafe {
+                self.af.single.a = !self.af.single.a;
+                self.af.single.f |= 0x60; // Set N and H only
+            },
+            Instruction::Scf => unsafe {
+                self.af.single.f &= 0x80; // clear all flags but Z
+                self.af.single.f |= 0x10; // set carry
+            },
+            Instruction::Ccf => unsafe {
+                self.af.single.f ^= 0x60; // clear N and H
+                self.af.single.f ^= 0x10; // flip carry
             },
 
             Instruction::Rlc(r8) => unsafe {
