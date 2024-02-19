@@ -233,41 +233,41 @@ impl Display for R16Stack {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Condition {
+pub enum Cond {
     NZ,
     Z,
     NC,
     C,
 }
 
-impl Condition {
+impl Cond {
     fn from_operand(operand: u8) -> Self {
         match operand {
-            0b00 => Condition::NZ,
-            0b01 => Condition::Z,
-            0b10 => Condition::NC,
-            0b11 => Condition::C,
+            0b00 => Cond::NZ,
+            0b01 => Cond::Z,
+            0b10 => Cond::NC,
+            0b11 => Cond::C,
             _ => unimplemented!("Conditions::from_operand({:#04x})", operand),
         }
     }
 
     fn as_operand(&self) -> u8 {
         match self {
-            Condition::NZ => 0b00,
-            Condition::Z => 0b01,
-            Condition::NC => 0b10,
-            Condition::C => 0b11,
+            Cond::NZ => 0b00,
+            Cond::Z => 0b01,
+            Cond::NC => 0b10,
+            Cond::C => 0b11,
         }
     }
 }
 
-impl Display for Condition {
+impl Display for Cond {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Condition::NZ => write!(f, "NZ"),
-            Condition::Z => write!(f, "Z"),
-            Condition::NC => write!(f, "NC"),
-            Condition::C => write!(f, "C"),
+            Cond::NZ => write!(f, "NZ"),
+            Cond::Z => write!(f, "Z"),
+            Cond::NC => write!(f, "NC"),
+            Cond::C => write!(f, "C"),
         }
     }
 }
@@ -291,7 +291,7 @@ pub enum Instruction {
     // RLA - 0x17
     JumpNear(E8), // 0x18
     // RRA - 0x1f
-    JumpNearCond(E8, Condition), // 0x20
+    JumpNearCond(E8, Cond), // 0x20
     // daa - 0x27
     // cpl - 0x2f
     // scf - 0x37
@@ -306,12 +306,12 @@ pub enum Instruction {
     XORR8(R8),             // 0xA8
     ORR8(R8),              // 0xB0
     CPR8(R8),              // 0xB8
-    RetCond(Condition),    // 0xc0
+    RetCond(Cond),         // 0xc0
     PopR16Stack(R16Stack), // 0xc1
     // jp cond // 0xC2
     // jp // 0xc3
-    CallCondA16(Condition, A16), // 0xc4
-    PushR16Stack(R16Stack),      // 0xC5
+    CallCondA16(Cond, A16), // 0xc4
+    PushR16Stack(R16Stack), // 0xC5
     // ADDAImm8 // 0xC6
     // rst tgt3 // 0xC7
     Ret, // 0xc0
@@ -476,20 +476,20 @@ impl Instruction {
             Instruction::JumpNear(e8) => vec![0x18, *e8 as u8],
             Instruction::JumpNearCond(e8, cond) => {
                 let cond = match cond {
-                    Condition::NZ => 0b00,
-                    Condition::Z => 0b01,
-                    Condition::NC => 0b10,
-                    Condition::C => 0b11,
+                    Cond::NZ => 0b00,
+                    Cond::Z => 0b01,
+                    Cond::NC => 0b10,
+                    Cond::C => 0b11,
                 };
                 vec![0x20 | cond << 3, *e8 as u8]
             }
             Instruction::Ret => vec![0xc9],
             Instruction::RetCond(cond) => {
                 let cond = match cond {
-                    Condition::NZ => 0b00,
-                    Condition::Z => 0b01,
-                    Condition::NC => 0b10,
-                    Condition::C => 0b11,
+                    Cond::NZ => 0b00,
+                    Cond::Z => 0b01,
+                    Cond::NC => 0b10,
+                    Cond::C => 0b11,
                 };
                 vec![0xc0 | cond << 3]
             }
@@ -704,7 +704,7 @@ impl Instruction {
                         } else {
                             Instruction::JumpNearCond(
                                 Self::read_u8_helper(buf, addr + 1) as i8,
-                                Condition::from_operand((byte >> 3) & 0x3),
+                                Cond::from_operand((byte >> 3) & 0x3),
                             )
                         }
                     }
@@ -766,7 +766,7 @@ impl Instruction {
                 }
                 0xcd => Instruction::CallA16(Self::read_u16_helper(buf, addr + 1)),
                 0xc4 => Instruction::CallCondA16(
-                    Condition::from_operand(byte >> 3 & 0x3),
+                    Cond::from_operand(byte >> 3 & 0x3),
                     Self::read_u16_helper(buf, addr + 1),
                 ),
                 0xc5 => Instruction::PushR16Stack(R16Stack::BC),
@@ -777,11 +777,11 @@ impl Instruction {
                 0xd1 => Instruction::PopR16Stack(R16Stack::DE),
                 0xe1 => Instruction::PopR16Stack(R16Stack::HL),
                 0xf1 => Instruction::PopR16Stack(R16Stack::AF),
-                0xc0 => Instruction::RetCond(Condition::NZ),
-                0xc8 => Instruction::RetCond(Condition::Z),
+                0xc0 => Instruction::RetCond(Cond::NZ),
+                0xc8 => Instruction::RetCond(Cond::Z),
                 0xc9 => Instruction::Ret,
-                0xd0 => Instruction::RetCond(Condition::NC),
-                0xd8 => Instruction::RetCond(Condition::C),
+                0xd0 => Instruction::RetCond(Cond::NC),
+                0xd8 => Instruction::RetCond(Cond::C),
                 _ => return Err(InstructionError::Unknown(byte).into()),
             },
             _ => unreachable!(),
@@ -882,7 +882,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
-            (Instruction::JumpNearCond(0x34, Condition::C), 2)
+            (Instruction::JumpNearCond(0x34, Cond::C), 2)
         );
 
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
@@ -962,7 +962,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xc0).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
-            (Instruction::RetCond(Condition::NZ), 1)
+            (Instruction::RetCond(Cond::NZ), 1)
         );
 
         assert_eq!(Instruction::size_header(0xcd).unwrap(), 3);
@@ -974,7 +974,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xc4).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc4, 0x34, 0x12], 0, 3).unwrap(),
-            (Instruction::CallCondA16(Condition::NZ, 0x1234), 3)
+            (Instruction::CallCondA16(Cond::NZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xc1).unwrap(), 1);

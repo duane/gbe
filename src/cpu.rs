@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use crate::{
     bus::Bus,
-    instruction::{Condition, Instruction, R16Mem, R16Stack, R16, R8},
+    instruction::{Cond, Instruction, R16Mem, R16Stack, R16, R8},
 };
 
 #[derive(Clone, Copy)]
@@ -153,10 +153,10 @@ impl CPU {
             }
             Instruction::CallCondA16(cond, a16) => unsafe {
                 action_taken = match cond {
-                    Condition::Z => self.af.single.f & 0x80 == 0x80,
-                    Condition::NZ => self.af.single.f & 0x80 != 0x80,
-                    Condition::C => self.af.single.f & 0x10 == 0x10,
-                    Condition::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::Z => self.af.single.f & 0x80 == 0x80,
+                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::C => self.af.single.f & 0x10 == 0x10,
+                    Cond::NC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.sp -= 2;
@@ -169,10 +169,10 @@ impl CPU {
             }
             Instruction::JumpNearCond(offset, cond) => unsafe {
                 action_taken = match cond {
-                    Condition::Z => self.af.single.f & 0x80 == 0x80,
-                    Condition::NZ => self.af.single.f & 0x80 != 0x80,
-                    Condition::C => self.af.single.f & 0x10 == 0x10,
-                    Condition::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::Z => self.af.single.f & 0x80 == 0x80,
+                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::C => self.af.single.f & 0x10 == 0x10,
+                    Cond::NC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.pc = (self.pc as i32 + offset as i32) as u16;
@@ -184,10 +184,10 @@ impl CPU {
             }
             Instruction::RetCond(cond) => unsafe {
                 let action_taken = match cond {
-                    Condition::Z => self.af.single.f & 0x80 == 0x80,
-                    Condition::NZ => self.af.single.f & 0x80 != 0x80,
-                    Condition::C => self.af.single.f & 0x10 == 0x10,
-                    Condition::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::Z => self.af.single.f & 0x80 == 0x80,
+                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::C => self.af.single.f & 0x10 == 0x10,
+                    Cond::NC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.pc = self.bus.read_u16(self.sp)?;
