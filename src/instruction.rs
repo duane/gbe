@@ -312,31 +312,31 @@ pub enum Instruction {
     JumpFar(A16),           // 0xc3
     CallCondA16(Cond, A16), // 0xc4
     PushR16Stack(R16Stack), // 0xC5
-    // ADDAImm8 // 0xC6
+    AddAN8(N8),             // 0xC6
     // rst tgt3 // 0xC7
     Ret, // 0xc0
     // prefix // 0xcb
     CallA16(A16), // 0xcd
-    // ADCAImm8 // 0xce
-    // SUBAImm8 // 0xD6
+    AdcAN8(N8),   // 0xce
+    SubAN8(N8),   // 0xD6
     // reti  // 0xD9
-    // SBCAImm8 // 0xDE
+    SbcAN8(N8),    // 0xDE
     StoreAA8H(A8), // 0xE0
     StoreACH,      // 0xE2
-    // ANDAImm8 // 0xE6
+    AndAN8(N8),    // 0xE6
     // ADDSPImm8 // 0xE8
     // jp hl // 0xE9
     StoreAA16(A16), // 0xEA
-    // XORAImm8 // 0xEE
-    LoadAA8H(N8), // 0xF0
-    LoadACH,      // 0xF2
+    XorAN8(N8),     // 0xEE
+    LoadAA8H(N8),   // 0xF0
+    LoadACH,        // 0xF2
     // di // 0xF3
-    // ORAImm8 // 0xF6
+    OrAN8(N8), // 0xF6
     // LoadHLSPImm8 // 0xF8
     // LoadHLSP // 0xF9
     LoadAA16(A16), // 0xFA
     // ei // 0xFB
-    // CPAImm8 // 0xFE
+    CpAN8(N8), // 0xFE
 
     // Prefixed instructions
     Rlc(R8),         // 0x00
@@ -402,6 +402,15 @@ impl Display for Instruction {
             Instruction::DecR16(r16) => write!(f, "dec {}", r16),
             Instruction::DecR8(r8) => write!(f, "dec {}", r8),
             Instruction::AddHLR16(r16) => write!(f, "add hl, {}", r16),
+
+            Instruction::AddAN8(n8) => write!(f, "add a, {}", n8),
+            Instruction::AdcAN8(n8) => write!(f, "adc a, {}", n8),
+            Instruction::SubAN8(n8) => write!(f, "sub a, {}", n8),
+            Instruction::SbcAN8(n8) => write!(f, "sbc a, {}", n8),
+            Instruction::AndAN8(n8) => write!(f, "and A, {}", n8),
+            Instruction::XorAN8(n8) => write!(f, "xor A, {}", n8),
+            Instruction::OrAN8(n8) => write!(f, "or A, {}", n8),
+            Instruction::CpAN8(n8) => write!(f, "cp A, {}", n8),
 
             Instruction::AddR8(source) => write!(f, "add a, {}", source),
             Instruction::AdcR8(source) => write!(f, "adc a, {}", source),
@@ -474,9 +483,10 @@ impl Instruction {
                     0xf0 => 2, // ldh a, [imm8]
                     0xfa => 3, // ld a, [imm16]
                     0xe2 | 0xf2 => 1,
-                    0xc4 => 3,                             // call cond, imm16
-                    0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
-                    0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
+                    0xc4 => 3, // call cond, imm16
+                    0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
+                    0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
+                    0xc1 | 0xd1 | 0xe1 | 0xf1 => 1, // pop
                     0xC2 | 0xCA | 0xD2 | 0xDA | 0xC3 => 3, // jp
                     0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
                     _ => return Err(InstructionError::Unknown(insn).into()),
@@ -528,6 +538,15 @@ impl Instruction {
             Instruction::DecR16(r16) => vec![0xb | r16.as_operand() << 4],
             Instruction::DecR8(r8) => vec![0x5 | r8.as_operand() << 3],
             Instruction::AddHLR16(r16) => vec![0x9 | r16.as_operand() << 4],
+
+            Instruction::AddAN8(n8) => vec![0xC6, *n8],
+            Instruction::AdcAN8(n8) => vec![0xCE, *n8],
+            Instruction::SubAN8(n8) => vec![0xD6, *n8],
+            Instruction::SbcAN8(n8) => vec![0xDE, *n8],
+            Instruction::AndAN8(n8) => vec![0xE6, *n8],
+            Instruction::XorAN8(n8) => vec![0xEE, *n8],
+            Instruction::OrAN8(n8) => vec![0xF6, *n8],
+            Instruction::CpAN8(n8) => vec![0xFE, *n8],
 
             Instruction::AddR8(source) => vec![0x10 << 3 | source.as_operand()],
             Instruction::AdcR8(source) => vec![0x11 << 3 | source.as_operand()],
@@ -600,6 +619,15 @@ impl Instruction {
             Instruction::DecR16(_) => 1,
             Instruction::DecR8(_) => 1,
             Instruction::AddHLR16(_) => 1,
+
+            Instruction::AddAN8(_) => 2,
+            Instruction::AdcAN8(_) => 2,
+            Instruction::SubAN8(_) => 2,
+            Instruction::SbcAN8(_) => 2,
+            Instruction::AndAN8(_) => 2,
+            Instruction::XorAN8(_) => 2,
+            Instruction::OrAN8(_) => 2,
+            Instruction::CpAN8(_) => 2,
 
             Instruction::AddR8(_) => 1,
             Instruction::AdcR8(_) => 1,
@@ -675,6 +703,15 @@ impl Instruction {
             Instruction::DecR16(_) => (8, 8),
             Instruction::DecR8(_) => (4, 4),
             Instruction::AddHLR16(_) => (12, 12),
+
+            Instruction::AddAN8(_) => (8, 8),
+            Instruction::AdcAN8(_) => (8, 8),
+            Instruction::SubAN8(_) => (8, 8),
+            Instruction::SbcAN8(_) => (8, 8),
+            Instruction::AndAN8(_) => (8, 8),
+            Instruction::XorAN8(_) => (8, 8),
+            Instruction::OrAN8(_) => (8, 8),
+            Instruction::CpAN8(_) => (8, 8),
 
             Instruction::AddR8(_) => (4, 4),
             Instruction::AdcR8(_) => (4, 4),
@@ -845,6 +882,15 @@ impl Instruction {
                     Cond::from_operand(byte >> 3 & 0x3),
                     Self::read_u16_helper(buf, addr + 1),
                 ),
+
+                0xc6 => Instruction::AddAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xce => Instruction::AdcAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xd6 => Instruction::SubAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xde => Instruction::SbcAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xe6 => Instruction::AndAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xee => Instruction::XorAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xf6 => Instruction::OrAN8(Self::read_u8_helper(buf, addr + 1)),
+                0xfe => Instruction::CpAN8(Self::read_u8_helper(buf, addr + 1)),
 
                 0xc5 => Instruction::PushR16Stack(R16Stack::BC),
                 0xd5 => Instruction::PushR16Stack(R16Stack::DE),
@@ -1095,6 +1141,47 @@ mod tests {
 
     #[test]
     fn block3() {
+        assert_eq!(Instruction::size_header(0xC6).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xC6, 0x12], 0, 2).unwrap(),
+            (Instruction::AddAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xCE).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCE, 0x12], 0, 2).unwrap(),
+            (Instruction::AdcAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xD6).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xD6, 0x12], 0, 2).unwrap(),
+            (Instruction::SubAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xDE).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xDE, 0x12], 0, 2).unwrap(),
+            (Instruction::SbcAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xE6).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xE6, 0x12], 0, 2).unwrap(),
+            (Instruction::AndAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xEE).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xEE, 0x12], 0, 2).unwrap(),
+            (Instruction::XorAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xF6).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xF6, 0x12], 0, 2).unwrap(),
+            (Instruction::OrAN8(0x12), 2)
+        );
+        assert_eq!(Instruction::size_header(0xFE).unwrap(), 2);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xFE, 0x12], 0, 2).unwrap(),
+            (Instruction::CpAN8(0x12), 2)
+        );
+
         assert_eq!(Instruction::size_header(0xc9).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc9], 0, 1).unwrap(),

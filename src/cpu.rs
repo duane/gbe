@@ -462,6 +462,103 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
+            Instruction::AddAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let c = Self::carry(a, n, false);
+                let h = Self::half_carry(a, n, false);
+                let result = a.wrapping_add(n);
+                let z = result == 0;
+                let n = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::AdcAN8(n8) => unsafe {
+                let c = self.af.single.f & 0x10 == 0x10;
+                let a = self.af.single.a;
+                let n = n8;
+                let c3 = Self::carry(a, n, c);
+                let h = Self::half_carry(a, n, c);
+                let result = a.wrapping_add(n).wrapping_add(c as u8);
+                let z = result == 0;
+                let n = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c3 as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::SubAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let result = a.wrapping_sub(n);
+                let z = result == 0;
+                let c = a < n;
+                let h = (a & 0xf) < (n & 0xf);
+                let n = true;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::SbcAN8(n8) => unsafe {
+                let c = self.af.single.f & 0x10 == 0x10;
+                let a = self.af.single.a;
+                let n = n8;
+                let c3 = Self::carry(a, n, c);
+                let h = Self::half_carry(a, n, c);
+                let result = a.wrapping_sub(n).wrapping_sub(c as u8);
+                let z = result == 0;
+                let n = true;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c3 as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::AndAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let result = a & n;
+                let z = result == 0;
+                let c = false;
+                let n = false;
+                let h = true;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::OrAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let result = a | n;
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                let c = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::XorAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let result = a ^ n;
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                let c = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                self.af.single.a = result;
+            },
+            Instruction::CpAN8(n8) => unsafe {
+                let a = self.af.single.a;
+                let n = n8;
+                let z = a == n;
+                let c = a < n;
+                let h = (a & 0xf) < (n & 0xf);
+                let n = true;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+            },
+
             Instruction::AndR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a &= self.bc.single.b,
