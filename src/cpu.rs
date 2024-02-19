@@ -370,7 +370,7 @@ impl CPU {
                     R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
-            Instruction::ADDR8(reg) => unsafe {
+            Instruction::AddR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let b = match reg {
                     R8::B => self.bc.single.b,
@@ -391,7 +391,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::ADCR8(reg) => unsafe {
+            Instruction::AdcR8(reg) => unsafe {
                 let c = self.af.single.f & 0x10 == 0x10;
                 let a = self.af.single.a;
                 let b = match reg {
@@ -413,7 +413,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c3 as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::SUBR8(reg) => unsafe {
+            Instruction::SubR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
@@ -434,7 +434,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::ANDR8(reg) => unsafe {
+            Instruction::AndR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a &= self.bc.single.b,
                     R8::C => self.af.single.a &= self.bc.single.c,
@@ -452,7 +452,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::ORR8(reg) => unsafe {
+            Instruction::OrR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a |= self.bc.single.b,
                     R8::C => self.af.single.a |= self.bc.single.c,
@@ -470,7 +470,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::XORR8(reg) => unsafe {
+            Instruction::XorR8(reg) => unsafe {
                 match reg as R8 {
                     R8::B => self.af.single.a ^= self.bc.single.b,
                     R8::C => self.af.single.a ^= self.bc.single.c,
@@ -488,7 +488,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::CPR8(reg) => unsafe {
+            Instruction::CpR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
@@ -507,7 +507,7 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
-            Instruction::SBCR8(reg) => unsafe {
+            Instruction::SbcR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
                     R8::B => self.bc.single.b,
@@ -528,7 +528,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
-            Instruction::BIT(bit, r8) => unsafe {
+            Instruction::Bit(bit, r8) => unsafe {
                 let mask: u8 = 1 << bit.encode();
                 let val = match r8 {
                     R8::B => self.bc.single.b,
@@ -549,7 +549,7 @@ impl CPU {
                     | ((h as u8) << 5)
                     | (self.af.single.f & 0x10);
             },
-            Instruction::RESET(bit, r8) => unsafe {
+            Instruction::Res(bit, r8) => unsafe {
                 let mask: u8 = 0xff ^ (1 << bit.encode());
                 match r8 {
                     R8::B => self.bc.single.b &= mask,
@@ -565,7 +565,7 @@ impl CPU {
                     R8::A => self.af.single.a &= mask,
                 };
             },
-            Instruction::SET(bit, r8) => unsafe {
+            Instruction::Set(bit, r8) => unsafe {
                 let mask: u8 = 1 << bit.encode();
                 match r8 {
                     R8::B => self.bc.single.b |= mask,

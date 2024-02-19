@@ -298,14 +298,14 @@ pub enum Instruction {
     // ccf - 0x3f
     LoadR8R8(R8, R8),      // 0x40
     Halt,                  // 0x76
-    ADDR8(R8),             // 0x80
-    ADCR8(R8),             // 0x88
-    SUBR8(R8),             // 0x90
-    SBCR8(R8),             // 0x98
-    ANDR8(R8),             // 0xA0
-    XORR8(R8),             // 0xA8
-    ORR8(R8),              // 0xB0
-    CPR8(R8),              // 0xB8
+    AddR8(R8),             // 0x80
+    AdcR8(R8),             // 0x88
+    SubR8(R8),             // 0x90
+    SbcR8(R8),             // 0x98
+    AndR8(R8),             // 0xA0
+    XorR8(R8),             // 0xA8
+    OrR8(R8),              // 0xB0
+    CpR8(R8),              // 0xB8
     RetCond(Cond),         // 0xc0
     PopR16Stack(R16Stack), // 0xc1
     // jp cond // 0xC2
@@ -347,9 +347,9 @@ pub enum Instruction {
     // SRA  - 0x28
     // SWAP - 0x30
     // SRL  - 0x38
-    BIT(BitRef, R8),   // 0x40
-    RESET(BitRef, R8), // 0x80
-    SET(BitRef, R8),   // 0xC0
+    Bit(BitRef, R8), // 0x40
+    Res(BitRef, R8), // 0x80
+    Set(BitRef, R8), // 0xC0
 }
 
 pub const ILLEGAL_INSTRUCTIONS: [u8; 11] = [
@@ -400,18 +400,18 @@ impl Display for Instruction {
             Instruction::DecR16(r16) => write!(f, "dec {}", r16),
             Instruction::DecR8(r8) => write!(f, "dec {}", r8),
 
-            Instruction::ADDR8(source) => write!(f, "add a, {}", source),
-            Instruction::ADCR8(source) => write!(f, "adc a, {}", source),
-            Instruction::SUBR8(source) => write!(f, "sub a, {}", source),
-            Instruction::SBCR8(source) => write!(f, "sbc a, {}", source),
-            Instruction::ANDR8(source) => write!(f, "and A, {}", source),
-            Instruction::XORR8(source) => write!(f, "xor A, {}", source),
-            Instruction::ORR8(source) => write!(f, "or A, {}", source),
-            Instruction::CPR8(source) => write!(f, "cp A, {}", source),
+            Instruction::AddR8(source) => write!(f, "add a, {}", source),
+            Instruction::AdcR8(source) => write!(f, "adc a, {}", source),
+            Instruction::SubR8(source) => write!(f, "sub a, {}", source),
+            Instruction::SbcR8(source) => write!(f, "sbc a, {}", source),
+            Instruction::AndR8(source) => write!(f, "and A, {}", source),
+            Instruction::XorR8(source) => write!(f, "xor A, {}", source),
+            Instruction::OrR8(source) => write!(f, "or A, {}", source),
+            Instruction::CpR8(source) => write!(f, "cp A, {}", source),
 
-            Instruction::BIT(b3, r8) => write!(f, "bit {}, {}", b3, r8),
-            Instruction::RESET(b3, r8) => write!(f, "res {}, {}", b3, r8),
-            Instruction::SET(b3, r8) => write!(f, "set {}, {}", b3, r8),
+            Instruction::Bit(b3, r8) => write!(f, "bit {}, {}", b3, r8),
+            Instruction::Res(b3, r8) => write!(f, "res {}, {}", b3, r8),
+            Instruction::Set(b3, r8) => write!(f, "set {}, {}", b3, r8),
         }
     }
 }
@@ -538,21 +538,21 @@ impl Instruction {
                 vec![0x5 | r8.as_operand() << 3]
             }
 
-            Instruction::ADDR8(source) => vec![0x10 << 3 | source.as_operand()],
-            Instruction::ADCR8(source) => vec![0x11 << 3 | source.as_operand()],
-            Instruction::SUBR8(source) => vec![0x12 << 3 | source.as_operand()],
-            Instruction::SBCR8(source) => vec![0x13 << 3 | source.as_operand()],
-            Instruction::ANDR8(source) => vec![0x14 << 3 | source.as_operand()],
-            Instruction::XORR8(source) => vec![0x15 << 3 | source.as_operand()],
-            Instruction::ORR8(source) => vec![0x16 << 3 | source.as_operand()],
-            Instruction::CPR8(source) => vec![0x17 << 3 | source.as_operand()],
-            Instruction::BIT(b3, r8) => {
+            Instruction::AddR8(source) => vec![0x10 << 3 | source.as_operand()],
+            Instruction::AdcR8(source) => vec![0x11 << 3 | source.as_operand()],
+            Instruction::SubR8(source) => vec![0x12 << 3 | source.as_operand()],
+            Instruction::SbcR8(source) => vec![0x13 << 3 | source.as_operand()],
+            Instruction::AndR8(source) => vec![0x14 << 3 | source.as_operand()],
+            Instruction::XorR8(source) => vec![0x15 << 3 | source.as_operand()],
+            Instruction::OrR8(source) => vec![0x16 << 3 | source.as_operand()],
+            Instruction::CpR8(source) => vec![0x17 << 3 | source.as_operand()],
+            Instruction::Bit(b3, r8) => {
                 vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
-            Instruction::RESET(b3, r8) => {
+            Instruction::Res(b3, r8) => {
                 vec![0xCB, 0b10_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
-            Instruction::SET(b3, r8) => {
+            Instruction::Set(b3, r8) => {
                 vec![0xCB, 0b11_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
         }
@@ -590,18 +590,18 @@ impl Instruction {
             Instruction::DecR16(_) => 1,
             Instruction::DecR8(_) => 1,
 
-            Instruction::ADDR8(_) => 1,
-            Instruction::ADCR8(_) => 1,
-            Instruction::SUBR8(_) => 1,
-            Instruction::SBCR8(_) => 1,
-            Instruction::ANDR8(_) => 1,
-            Instruction::XORR8(_) => 1,
-            Instruction::ORR8(_) => 1,
-            Instruction::CPR8(_) => 1,
+            Instruction::AddR8(_) => 1,
+            Instruction::AdcR8(_) => 1,
+            Instruction::SubR8(_) => 1,
+            Instruction::SbcR8(_) => 1,
+            Instruction::AndR8(_) => 1,
+            Instruction::XorR8(_) => 1,
+            Instruction::OrR8(_) => 1,
+            Instruction::CpR8(_) => 1,
 
-            Instruction::BIT(_, _) => 2,
-            Instruction::RESET(_, _) => 2,
-            Instruction::SET(_, _) => 2,
+            Instruction::Bit(_, _) => 2,
+            Instruction::Res(_, _) => 2,
+            Instruction::Set(_, _) => 2,
         }
     }
 
@@ -644,18 +644,18 @@ impl Instruction {
             Instruction::DecR16(_) => (8, 8),
             Instruction::DecR8(_) => (4, 4),
 
-            Instruction::ADDR8(_) => (4, 4),
-            Instruction::ADCR8(_) => (4, 4),
-            Instruction::SUBR8(_) => (4, 4),
-            Instruction::SBCR8(_) => (4, 4),
-            Instruction::ANDR8(_) => (4, 4),
-            Instruction::XORR8(_) => (4, 4),
-            Instruction::ORR8(_) => (4, 4),
-            Instruction::CPR8(_) => (4, 4),
+            Instruction::AddR8(_) => (4, 4),
+            Instruction::AdcR8(_) => (4, 4),
+            Instruction::SubR8(_) => (4, 4),
+            Instruction::SbcR8(_) => (4, 4),
+            Instruction::AndR8(_) => (4, 4),
+            Instruction::XorR8(_) => (4, 4),
+            Instruction::OrR8(_) => (4, 4),
+            Instruction::CpR8(_) => (4, 4),
 
-            Instruction::BIT(_, _) => (8, 8),
-            Instruction::RESET(_, _) => (8, 8),
-            Instruction::SET(_, _) => (8, 8),
+            Instruction::Bit(_, _) => (8, 8),
+            Instruction::Res(_, _) => (8, 8),
+            Instruction::Set(_, _) => (8, 8),
         }
     }
 
@@ -728,14 +728,14 @@ impl Instruction {
             0b10 => {
                 let source_operand = R8::from_operand(byte & 0x3);
                 match byte >> 3 {
-                    0x10 => Instruction::ADDR8(source_operand),
-                    0x11 => Instruction::ADCR8(source_operand),
-                    0x12 => Instruction::SUBR8(source_operand),
-                    0x13 => Instruction::SBCR8(source_operand),
-                    0x14 => Instruction::ANDR8(source_operand),
-                    0x15 => Instruction::XORR8(source_operand),
-                    0x16 => Instruction::ORR8(source_operand),
-                    0x17 => Instruction::CPR8(source_operand),
+                    0x10 => Instruction::AddR8(source_operand),
+                    0x11 => Instruction::AdcR8(source_operand),
+                    0x12 => Instruction::SubR8(source_operand),
+                    0x13 => Instruction::SbcR8(source_operand),
+                    0x14 => Instruction::AndR8(source_operand),
+                    0x15 => Instruction::XorR8(source_operand),
+                    0x16 => Instruction::OrR8(source_operand),
+                    0x17 => Instruction::CpR8(source_operand),
                     _ => return Err(InstructionError::Unknown(byte).into()),
                 }
             }
@@ -749,15 +749,15 @@ impl Instruction {
                 0xcb => {
                     let byte = buf[addr as usize + 1];
                     match byte >> 6 {
-                        0b01 => Instruction::BIT(
+                        0b01 => Instruction::Bit(
                             BitRef::decode((byte >> 3) & 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
-                        0b10 => Instruction::RESET(
+                        0b10 => Instruction::Res(
                             BitRef::decode((byte >> 3) >> 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
-                        0b11 => Instruction::SET(
+                        0b11 => Instruction::Set(
                             BitRef::decode((byte >> 3) >> 0x7),
                             R8::from_operand(byte & 0x7),
                         ),
@@ -912,43 +912,43 @@ mod tests {
         assert_eq!(Instruction::size_header(0x10 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x10 << 3], 0, 1).unwrap(),
-            (Instruction::ADDR8(R8::B), 1)
+            (Instruction::AddR8(R8::B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x11 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x11 << 3], 0, 1).unwrap(),
-            (Instruction::ADCR8(R8::B), 1)
+            (Instruction::AdcR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x12 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x12 << 3], 0, 1).unwrap(),
-            (Instruction::SUBR8(R8::B), 1)
+            (Instruction::SubR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x13 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x13 << 3], 0, 1).unwrap(),
-            (Instruction::SBCR8(R8::B), 1)
+            (Instruction::SbcR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x14 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x14 << 3], 0, 1).unwrap(),
-            (Instruction::ANDR8(R8::B), 1)
+            (Instruction::AndR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x15 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x15 << 3], 0, 1).unwrap(),
-            (Instruction::XORR8(R8::B), 1)
+            (Instruction::XorR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x16 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x16 << 3], 0, 1).unwrap(),
-            (Instruction::ORR8(R8::B), 1)
+            (Instruction::OrR8(R8::B), 1)
         );
         assert_eq!(Instruction::size_header(0x17 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x17 << 3], 0, 1).unwrap(),
-            (Instruction::CPR8(R8::B), 1)
+            (Instruction::CpR8(R8::B), 1)
         );
     }
 
@@ -1029,15 +1029,15 @@ mod tests {
         assert_eq!(Instruction::size_header(0xCB).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x40], 0, 2).unwrap(),
-            (Instruction::BIT(BitRef::B0, R8::B), 2)
+            (Instruction::Bit(BitRef::B0, R8::B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x80], 0, 2).unwrap(),
-            (Instruction::RESET(BitRef::B0, R8::B), 2)
+            (Instruction::Res(BitRef::B0, R8::B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0xC0], 0, 2).unwrap(),
-            (Instruction::SET(BitRef::B0, R8::B), 2)
+            (Instruction::Set(BitRef::B0, R8::B), 2)
         );
     }
 
@@ -1091,7 +1091,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xa8).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
-            (Instruction::XORR8(R8::B), 1)
+            (Instruction::XorR8(R8::B), 1)
         );
     }
 }
