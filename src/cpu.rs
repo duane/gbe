@@ -162,10 +162,10 @@ impl CPU {
             }
             Instruction::CallCondA16(cond, a16) => unsafe {
                 action_taken = match cond {
-                    Cond::Z => self.af.single.f & 0x80 == 0x80,
-                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
-                    Cond::C => self.af.single.f & 0x10 == 0x10,
-                    Cond::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::CondZ => self.af.single.f & 0x80 == 0x80,
+                    Cond::CondNZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::CondC => self.af.single.f & 0x10 == 0x10,
+                    Cond::CondNC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.sp -= 2;
@@ -178,10 +178,10 @@ impl CPU {
             }
             Instruction::JumpNearCond(cond, e8) => unsafe {
                 action_taken = match cond {
-                    Cond::Z => self.af.single.f & 0x80 == 0x80,
-                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
-                    Cond::C => self.af.single.f & 0x10 == 0x10,
-                    Cond::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::CondZ => self.af.single.f & 0x80 == 0x80,
+                    Cond::CondNZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::CondC => self.af.single.f & 0x10 == 0x10,
+                    Cond::CondNC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.pc = (self.pc as i32 + e8 as i32) as u16;
@@ -190,10 +190,10 @@ impl CPU {
             Instruction::JumpFar(a16) => self.pc = a16,
             Instruction::JumpFarCond(cond, a16) => unsafe {
                 action_taken = match cond {
-                    Cond::Z => self.af.single.f & 0x80 == 0x80,
-                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
-                    Cond::C => self.af.single.f & 0x10 == 0x10,
-                    Cond::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::CondZ => self.af.single.f & 0x80 == 0x80,
+                    Cond::CondNZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::CondC => self.af.single.f & 0x10 == 0x10,
+                    Cond::CondNC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.pc = a16;
@@ -216,10 +216,10 @@ impl CPU {
             }
             Instruction::RetCond(cond) => unsafe {
                 let action_taken = match cond {
-                    Cond::Z => self.af.single.f & 0x80 == 0x80,
-                    Cond::NZ => self.af.single.f & 0x80 != 0x80,
-                    Cond::C => self.af.single.f & 0x10 == 0x10,
-                    Cond::NC => self.af.single.f & 0x10 != 0x10,
+                    Cond::CondZ => self.af.single.f & 0x80 == 0x80,
+                    Cond::CondNZ => self.af.single.f & 0x80 != 0x80,
+                    Cond::CondC => self.af.single.f & 0x10 == 0x10,
+                    Cond::CondNC => self.af.single.f & 0x10 != 0x10,
                 };
                 if action_taken {
                     self.pc = self.bus.read_u16(self.sp)?;
@@ -227,59 +227,59 @@ impl CPU {
             },
             Instruction::LoadAR16Mem(r16mem) => unsafe {
                 match r16mem {
-                    R16Mem::BC => self.af.single.a = self.bus.read_u8(self.bc.bc)?,
-                    R16Mem::DE => self.af.single.a = self.bus.read_u8(self.de.de)?,
-                    R16Mem::HLInc => {
+                    R16Mem::R16MemBC => self.af.single.a = self.bus.read_u8(self.bc.bc)?,
+                    R16Mem::R16MemDE => self.af.single.a = self.bus.read_u8(self.de.de)?,
+                    R16Mem::R16MemHLInc => {
                         self.af.single.a = self.bus.read_u8(self.hl.hl)?;
                         self.hl.hl += 1;
                     }
-                    R16Mem::HLDec => {
+                    R16Mem::R16MemHLDec => {
                         self.af.single.a = self.bus.read_u8(self.hl.hl)?;
                         self.hl.hl -= 1;
                     }
                 }
             },
             Instruction::LoadR16N16(r16, val) => match r16 {
-                R16::BC => self.bc.bc = val,
-                R16::DE => self.de.de = val,
-                R16::HL => self.hl.hl = val,
-                R16::SP => self.sp = val,
+                R16::R16BC => self.bc.bc = val,
+                R16::R16DE => self.de.de = val,
+                R16::R16HL => self.hl.hl = val,
+                R16::R16Sp => self.sp = val,
             },
             Instruction::LoadAA16(addr) => {
                 self.af.single.a = self.bus.read_u8(addr)?;
             }
             Instruction::LoadR8N8(reg, val) => match reg {
-                R8::A => self.af.single.a = val,
-                R8::B => self.bc.single.b = val,
-                R8::C => self.bc.single.c = val,
-                R8::D => self.de.single.d = val,
-                R8::E => self.de.single.e = val,
-                R8::H => self.hl.single.h = val,
-                R8::L => self.hl.single.l = val,
-                R8::HLRef => unsafe {
+                R8::R8A => self.af.single.a = val,
+                R8::R8B => self.bc.single.b = val,
+                R8::R8C => self.bc.single.c = val,
+                R8::R8D => self.de.single.d = val,
+                R8::R8E => self.de.single.e = val,
+                R8::R8H => self.hl.single.h = val,
+                R8::R8L => self.hl.single.l = val,
+                R8::R8HLRef => unsafe {
                     self.bus.write_u8(self.hl.hl, val)?;
                 },
             },
             Instruction::LoadR8R8(dst, src) => unsafe {
                 let read_byte = match src {
-                    R8::A => self.af.single.a,
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 match dst {
-                    R8::A => self.af.single.a = read_byte,
-                    R8::B => self.bc.single.b = read_byte,
-                    R8::C => self.bc.single.c = read_byte,
-                    R8::D => self.de.single.d = read_byte,
-                    R8::E => self.de.single.e = read_byte,
-                    R8::H => self.hl.single.h = read_byte,
-                    R8::L => self.hl.single.l = read_byte,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, read_byte)?,
+                    R8::R8A => self.af.single.a = read_byte,
+                    R8::R8B => self.bc.single.b = read_byte,
+                    R8::R8C => self.bc.single.c = read_byte,
+                    R8::R8D => self.de.single.d = read_byte,
+                    R8::R8E => self.de.single.e = read_byte,
+                    R8::R8H => self.hl.single.h = read_byte,
+                    R8::R8L => self.hl.single.l = read_byte,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, read_byte)?,
                 };
             },
             Instruction::LoadACH => unsafe {
@@ -297,13 +297,13 @@ impl CPU {
             },
             Instruction::StoreAR16Mem(r16mem) => unsafe {
                 match r16mem {
-                    R16Mem::BC => self.bus.write_u8(self.bc.bc, self.af.single.a)?,
-                    R16Mem::DE => self.bus.write_u8(self.de.de, self.af.single.a)?,
-                    R16Mem::HLInc => {
+                    R16Mem::R16MemBC => self.bus.write_u8(self.bc.bc, self.af.single.a)?,
+                    R16Mem::R16MemDE => self.bus.write_u8(self.de.de, self.af.single.a)?,
+                    R16Mem::R16MemHLInc => {
                         self.bus.write_u8(self.hl.hl, self.af.single.a)?;
                         self.hl.hl += 1;
                     }
-                    R16Mem::HLDec => {
+                    R16Mem::R16MemHLDec => {
                         self.bus.write_u8(self.hl.hl, self.af.single.a)?;
                         self.hl.hl -= 1;
                     }
@@ -318,73 +318,73 @@ impl CPU {
             Instruction::PushR16Stack(operand) => unsafe {
                 self.sp -= 2;
                 match operand {
-                    R16Stack::AF => self.bus.write_u16(self.sp, self.af.af)?,
-                    R16Stack::BC => self.bus.write_u16(self.sp, self.bc.bc)?,
-                    R16Stack::DE => self.bus.write_u16(self.sp, self.de.de)?,
-                    R16Stack::HL => self.bus.write_u16(self.sp, self.hl.hl)?,
+                    R16Stack::R16StackAF => self.bus.write_u16(self.sp, self.af.af)?,
+                    R16Stack::R16StackBC => self.bus.write_u16(self.sp, self.bc.bc)?,
+                    R16Stack::R16StackDE => self.bus.write_u16(self.sp, self.de.de)?,
+                    R16Stack::R16StackHL => self.bus.write_u16(self.sp, self.hl.hl)?,
                 }
             },
             Instruction::PopR16Stack(operand) => {
                 match operand {
-                    R16Stack::AF => self.af.af = self.bus.read_u16(self.sp)?,
-                    R16Stack::BC => self.bc.bc = self.bus.read_u16(self.sp)?,
-                    R16Stack::DE => self.de.de = self.bus.read_u16(self.sp)?,
-                    R16Stack::HL => self.hl.hl = self.bus.read_u16(self.sp)?,
+                    R16Stack::R16StackAF => self.af.af = self.bus.read_u16(self.sp)?,
+                    R16Stack::R16StackBC => self.bc.bc = self.bus.read_u16(self.sp)?,
+                    R16Stack::R16StackDE => self.de.de = self.bus.read_u16(self.sp)?,
+                    R16Stack::R16StackHL => self.hl.hl = self.bus.read_u16(self.sp)?,
                 }
                 self.sp += 2;
             }
             Instruction::IncR16(r16) => unsafe {
                 match r16 {
-                    R16::BC => self.bc.bc += 1,
-                    R16::DE => self.de.de += 1,
-                    R16::HL => self.hl.hl += 1,
-                    R16::SP => self.sp += 1,
+                    R16::R16BC => self.bc.bc += 1,
+                    R16::R16DE => self.de.de += 1,
+                    R16::R16HL => self.hl.hl += 1,
+                    R16::R16Sp => self.sp += 1,
                 }
             },
             Instruction::IncR8(r8) => unsafe {
                 let r8_val = match r8 {
-                    R8::A => self.af.single.a,
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 let result = r8_val.wrapping_add(1);
                 self.af.single.f = ((result == 0) as u8) << 7
                     | (Self::half_carry(r8_val, 1, false) as u8) << 5
                     | self.af.single.f & 0x1f;
                 match r8 {
-                    R8::A => self.af.single.a = result,
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
             Instruction::DecR16(r16) => unsafe {
                 match r16 {
-                    R16::BC => self.bc.bc -= 1,
-                    R16::DE => self.de.de -= 1,
-                    R16::HL => self.hl.hl -= 1,
-                    R16::SP => self.sp -= 1,
+                    R16::R16BC => self.bc.bc -= 1,
+                    R16::R16DE => self.de.de -= 1,
+                    R16::R16HL => self.hl.hl -= 1,
+                    R16::R16Sp => self.sp -= 1,
                 }
             },
             Instruction::DecR8(r8) => unsafe {
                 let r8_val = match r8 {
-                    R8::A => self.af.single.a,
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
                 };
                 let result = r8_val.wrapping_sub(1);
                 self.af.single.f = ((result == 0) as u8) << 7
@@ -392,24 +392,24 @@ impl CPU {
                     | (Self::half_carry(r8_val, u8::MAX, false) as u8) << 5
                     | self.af.single.f & 0x1f;
                 match r8 {
-                    R8::A => self.af.single.a = result,
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
                 };
             },
 
             Instruction::AddHLR16(r16) => unsafe {
                 let hl = self.hl.hl;
                 let r16_val = match r16 {
-                    R16::BC => self.bc.bc,
-                    R16::DE => self.de.de,
-                    R16::HL => self.hl.hl,
-                    R16::SP => self.sp,
+                    R16::R16BC => self.bc.bc,
+                    R16::R16DE => self.de.de,
+                    R16::R16HL => self.hl.hl,
+                    R16::R16Sp => self.sp,
                 };
                 let result = hl.wrapping_add(r16_val);
                 let h = (hl & 0xfff) + (r16_val & 0xfff) > 0xfff;
@@ -421,14 +421,14 @@ impl CPU {
             Instruction::AddR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let b = match reg {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = Self::carry(a, b, false);
                 let h = Self::half_carry(a, b, false);
@@ -443,14 +443,14 @@ impl CPU {
                 let c = self.af.single.f & 0x10 == 0x10;
                 let a = self.af.single.a;
                 let b = match reg {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c3 = Self::carry(a, b, c);
                 let h = Self::half_carry(a, b, c);
@@ -464,14 +464,14 @@ impl CPU {
             Instruction::SubR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let result = a.wrapping_sub(n);
                 let z = a == n;
@@ -581,14 +581,14 @@ impl CPU {
 
             Instruction::AndR8(reg) => unsafe {
                 match reg as R8 {
-                    R8::B => self.af.single.a &= self.bc.single.b,
-                    R8::C => self.af.single.a &= self.bc.single.c,
-                    R8::D => self.af.single.a &= self.de.single.d,
-                    R8::E => self.af.single.a &= self.de.single.e,
-                    R8::H => self.af.single.a &= self.hl.single.h,
-                    R8::L => self.af.single.a &= self.hl.single.l,
-                    R8::HLRef => self.af.single.a &= self.bus.read_u8(self.hl.hl)?,
-                    R8::A => {}
+                    R8::R8B => self.af.single.a &= self.bc.single.b,
+                    R8::R8C => self.af.single.a &= self.bc.single.c,
+                    R8::R8D => self.af.single.a &= self.de.single.d,
+                    R8::R8E => self.af.single.a &= self.de.single.e,
+                    R8::R8H => self.af.single.a &= self.hl.single.h,
+                    R8::R8L => self.af.single.a &= self.hl.single.l,
+                    R8::R8HLRef => self.af.single.a &= self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => {}
                 }
                 let z = self.af.single.a == 0;
                 let c = false;
@@ -599,14 +599,14 @@ impl CPU {
             },
             Instruction::OrR8(reg) => unsafe {
                 match reg as R8 {
-                    R8::B => self.af.single.a |= self.bc.single.b,
-                    R8::C => self.af.single.a |= self.bc.single.c,
-                    R8::D => self.af.single.a |= self.de.single.d,
-                    R8::E => self.af.single.a |= self.de.single.e,
-                    R8::H => self.af.single.a |= self.hl.single.h,
-                    R8::L => self.af.single.a |= self.hl.single.l,
-                    R8::HLRef => self.af.single.a |= self.bus.read_u8(self.hl.hl)?,
-                    R8::A => {}
+                    R8::R8B => self.af.single.a |= self.bc.single.b,
+                    R8::R8C => self.af.single.a |= self.bc.single.c,
+                    R8::R8D => self.af.single.a |= self.de.single.d,
+                    R8::R8E => self.af.single.a |= self.de.single.e,
+                    R8::R8H => self.af.single.a |= self.hl.single.h,
+                    R8::R8L => self.af.single.a |= self.hl.single.l,
+                    R8::R8HLRef => self.af.single.a |= self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => {}
                 }
                 let z = self.af.single.a == 0;
                 let n = false;
@@ -617,14 +617,14 @@ impl CPU {
             },
             Instruction::XorR8(reg) => unsafe {
                 match reg as R8 {
-                    R8::B => self.af.single.a ^= self.bc.single.b,
-                    R8::C => self.af.single.a ^= self.bc.single.c,
-                    R8::D => self.af.single.a ^= self.de.single.d,
-                    R8::E => self.af.single.a ^= self.de.single.e,
-                    R8::H => self.af.single.a ^= self.hl.single.h,
-                    R8::L => self.af.single.a ^= self.hl.single.l,
-                    R8::HLRef => self.af.single.a ^= self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a ^= self.af.single.a,
+                    R8::R8B => self.af.single.a ^= self.bc.single.b,
+                    R8::R8C => self.af.single.a ^= self.bc.single.c,
+                    R8::R8D => self.af.single.a ^= self.de.single.d,
+                    R8::R8E => self.af.single.a ^= self.de.single.e,
+                    R8::R8H => self.af.single.a ^= self.hl.single.h,
+                    R8::R8L => self.af.single.a ^= self.hl.single.l,
+                    R8::R8HLRef => self.af.single.a ^= self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a ^= self.af.single.a,
                 }
                 let z = self.af.single.a == 0;
                 let n = false;
@@ -636,14 +636,14 @@ impl CPU {
             Instruction::CpR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let z = a == n;
                 let c = a < n;
@@ -655,14 +655,14 @@ impl CPU {
             Instruction::SbcR8(reg) => unsafe {
                 let a = self.af.single.a;
                 let n = match reg {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let result = a.wrapping_sub(n.wrapping_add(1));
                 let z = a == n.wrapping_add(1);
@@ -753,14 +753,14 @@ impl CPU {
 
             Instruction::Rlc(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x80 == 0x80;
                 let result = (val << 1) | (c as u8);
@@ -770,26 +770,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Rrc(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x1 == 0x1;
                 let result = (val >> 1) | ((c as u8) << 7);
@@ -799,27 +799,27 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
 
             Instruction::Rl(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x80 == 0x80;
                 let result = (val << 1) | ((self.af.single.f & 0x10) >> 4);
@@ -829,26 +829,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Rr(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x1 == 0x1;
                 let result = (val >> 1) | ((self.af.single.f & 0x10) << 3);
@@ -858,26 +858,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Sla(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x80 == 0x80;
                 let result = val << 1;
@@ -887,26 +887,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Sra(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x1 == 0x1;
                 let result = (val >> 1) | (val & 0x80);
@@ -916,26 +916,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Swap(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let result = (val >> 4) | (val << 4);
                 let z = result == 0;
@@ -945,26 +945,26 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
             Instruction::Srl(r8) => unsafe {
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let c = val & 0x1 == 0x1;
                 let result = val >> 1;
@@ -974,28 +974,28 @@ impl CPU {
                 self.af.single.f =
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 match r8 {
-                    R8::B => self.bc.single.b = result,
-                    R8::C => self.bc.single.c = result,
-                    R8::D => self.de.single.d = result,
-                    R8::E => self.de.single.e = result,
-                    R8::H => self.hl.single.h = result,
-                    R8::L => self.hl.single.l = result,
-                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
-                    R8::A => self.af.single.a = result,
+                    R8::R8B => self.bc.single.b = result,
+                    R8::R8C => self.bc.single.c = result,
+                    R8::R8D => self.de.single.d = result,
+                    R8::R8E => self.de.single.e = result,
+                    R8::R8H => self.hl.single.h = result,
+                    R8::R8L => self.hl.single.l = result,
+                    R8::R8HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::R8A => self.af.single.a = result,
                 };
             },
 
             Instruction::Bit(bit, r8) => unsafe {
                 let mask: u8 = 1 << bit.encode();
                 let val = match r8 {
-                    R8::B => self.bc.single.b,
-                    R8::C => self.bc.single.c,
-                    R8::D => self.de.single.d,
-                    R8::E => self.de.single.e,
-                    R8::H => self.hl.single.h,
-                    R8::L => self.hl.single.l,
-                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
-                    R8::A => self.af.single.a,
+                    R8::R8B => self.bc.single.b,
+                    R8::R8C => self.bc.single.c,
+                    R8::R8D => self.de.single.d,
+                    R8::R8E => self.de.single.e,
+                    R8::R8H => self.hl.single.h,
+                    R8::R8L => self.hl.single.l,
+                    R8::R8HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::R8A => self.af.single.a,
                 };
                 let result = val & mask;
                 let z = result == 0;
@@ -1009,33 +1009,33 @@ impl CPU {
             Instruction::Res(bit, r8) => unsafe {
                 let mask: u8 = 0xff ^ (1 << bit.encode());
                 match r8 {
-                    R8::B => self.bc.single.b &= mask,
-                    R8::C => self.bc.single.c &= mask,
-                    R8::D => self.de.single.d &= mask,
-                    R8::E => self.de.single.e &= mask,
-                    R8::H => self.hl.single.h &= mask,
-                    R8::L => self.hl.single.l &= mask,
-                    R8::HLRef => {
+                    R8::R8B => self.bc.single.b &= mask,
+                    R8::R8C => self.bc.single.c &= mask,
+                    R8::R8D => self.de.single.d &= mask,
+                    R8::R8E => self.de.single.e &= mask,
+                    R8::R8H => self.hl.single.h &= mask,
+                    R8::R8L => self.hl.single.l &= mask,
+                    R8::R8HLRef => {
                         let val = self.bus.read_u8(self.hl.hl)?;
                         self.bus.write_u8(self.hl.hl, val & mask)?;
                     }
-                    R8::A => self.af.single.a &= mask,
+                    R8::R8A => self.af.single.a &= mask,
                 };
             },
             Instruction::Set(bit, r8) => unsafe {
                 let mask: u8 = 1 << bit.encode();
                 match r8 {
-                    R8::B => self.bc.single.b |= mask,
-                    R8::C => self.bc.single.c |= mask,
-                    R8::D => self.de.single.d |= mask,
-                    R8::E => self.de.single.e |= mask,
-                    R8::H => self.hl.single.h |= mask,
-                    R8::L => self.hl.single.l |= mask,
-                    R8::HLRef => {
+                    R8::R8B => self.bc.single.b |= mask,
+                    R8::R8C => self.bc.single.c |= mask,
+                    R8::R8D => self.de.single.d |= mask,
+                    R8::R8E => self.de.single.e |= mask,
+                    R8::R8H => self.hl.single.h |= mask,
+                    R8::R8L => self.hl.single.l |= mask,
+                    R8::R8HLRef => {
                         let val = self.bus.read_u8(self.hl.hl)?;
                         self.bus.write_u8(self.hl.hl, val | mask)?;
                     }
-                    R8::A => self.af.single.a |= mask,
+                    R8::R8A => self.af.single.a |= mask,
                 };
             },
 
@@ -1083,8 +1083,7 @@ impl CPU {
             buf[i + 1] = self.bus.read_u8(self.pc)?;
             self.pc += 1;
         }
-        let (decoded, bytes_consumed) =
-            Instruction::from_u8_slice(buf.as_slice(), 0, size as usize)?;
+        let (decoded, bytes_consumed) = Instruction::from_u8_slice(buf.as_slice(), 0, size)?;
         assert!(
             bytes_consumed as usize == buf.len(),
             "differing expectations of instruction size: {} vs {}, bytes: {:02x?}",

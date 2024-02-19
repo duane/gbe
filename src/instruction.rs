@@ -125,27 +125,27 @@ impl BitRef {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16 {
-    BC,
-    DE,
-    HL,
-    SP,
+    R16BC,
+    R16DE,
+    R16HL,
+    R16Sp,
 }
 
 impl R16 {
-    fn as_operand(&self) -> u8 {
+    pub fn as_operand(&self) -> u8 {
         match self {
-            R16::BC => 0b00,
-            R16::DE => 0b01,
-            R16::HL => 0b10,
-            R16::SP => 0b11,
+            R16::R16BC => 0b00,
+            R16::R16DE => 0b01,
+            R16::R16HL => 0b10,
+            R16::R16Sp => 0b11,
         }
     }
-    fn from_operand(operand: u8) -> Self {
+    pub fn from_operand(operand: u8) -> Self {
         match operand {
-            0b00 => R16::BC,
-            0b01 => R16::DE,
-            0b10 => R16::HL,
-            0b11 => R16::SP,
+            0b00 => R16::R16BC,
+            0b01 => R16::R16DE,
+            0b10 => R16::R16HL,
+            0b11 => R16::R16Sp,
             _ => unimplemented!("R16::from_operand({:#04x})", operand),
         }
     }
@@ -154,38 +154,38 @@ impl R16 {
 impl Display for R16 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16::BC => write!(f, "bc"),
-            R16::DE => write!(f, "de"),
-            R16::HL => write!(f, "hl"),
-            R16::SP => write!(f, "sp"),
+            R16::R16BC => write!(f, "bc"),
+            R16::R16DE => write!(f, "de"),
+            R16::R16HL => write!(f, "hl"),
+            R16::R16Sp => write!(f, "sp"),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16Mem {
-    BC,
-    DE,
-    HLInc,
-    HLDec,
+    R16MemBC,
+    R16MemDE,
+    R16MemHLInc,
+    R16MemHLDec,
 }
 
 impl R16Mem {
-    fn as_operand(&self) -> u8 {
+    pub fn as_operand(&self) -> u8 {
         match self {
-            R16Mem::BC => 0b00,
-            R16Mem::DE => 0b01,
-            R16Mem::HLInc => 0b10,
-            R16Mem::HLDec => 0b11,
+            R16Mem::R16MemBC => 0b00,
+            R16Mem::R16MemDE => 0b01,
+            R16Mem::R16MemHLInc => 0b10,
+            R16Mem::R16MemHLDec => 0b11,
         }
     }
 
-    fn from_operand(operand: u8) -> Self {
+    pub fn from_operand(operand: u8) -> Self {
         match operand {
-            0b00 => R16Mem::BC,
-            0b01 => R16Mem::DE,
-            0b10 => R16Mem::HLInc,
-            0b11 => R16Mem::HLDec,
+            0b00 => R16Mem::R16MemBC,
+            0b01 => R16Mem::R16MemDE,
+            0b10 => R16Mem::R16MemHLInc,
+            0b11 => R16Mem::R16MemHLDec,
             _ => unimplemented!("R16Mem::from_operand({:#04x})", operand),
         }
     }
@@ -194,65 +194,65 @@ impl R16Mem {
 impl Display for R16Mem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16Mem::BC => write!(f, "[be]"),
-            R16Mem::DE => write!(f, "[de]"),
-            R16Mem::HLInc => write!(f, "[hl+]"),
-            R16Mem::HLDec => write!(f, "[hl-]"),
+            R16Mem::R16MemBC => write!(f, "[be]"),
+            R16Mem::R16MemDE => write!(f, "[de]"),
+            R16Mem::R16MemHLInc => write!(f, "[hl+]"),
+            R16Mem::R16MemHLDec => write!(f, "[hl-]"),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R8 {
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    HLRef,
-    A,
+    R8B,
+    R8C,
+    R8D,
+    R8E,
+    R8H,
+    R8L,
+    R8HLRef,
+    R8A,
 }
 
 impl Display for R8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R8::B => write!(f, "b"),
-            R8::C => write!(f, "c"),
-            R8::D => write!(f, "d"),
-            R8::E => write!(f, "e"),
-            R8::H => write!(f, "h"),
-            R8::L => write!(f, "l"),
-            R8::HLRef => write!(f, "[hl]"),
-            R8::A => write!(f, "a"),
+            R8::R8B => write!(f, "b"),
+            R8::R8C => write!(f, "c"),
+            R8::R8D => write!(f, "d"),
+            R8::R8E => write!(f, "e"),
+            R8::R8H => write!(f, "h"),
+            R8::R8L => write!(f, "l"),
+            R8::R8HLRef => write!(f, "[hl]"),
+            R8::R8A => write!(f, "a"),
         }
     }
 }
 
 impl R8 {
-    fn as_operand(&self) -> u8 {
+    pub fn as_operand(&self) -> u8 {
         match self {
-            R8::B => 0b000,
-            R8::C => 0b001,
-            R8::D => 0b010,
-            R8::E => 0b011,
-            R8::H => 0b100,
-            R8::L => 0b101,
-            R8::HLRef => 0b110,
-            R8::A => 0b111,
+            R8::R8B => 0b000,
+            R8::R8C => 0b001,
+            R8::R8D => 0b010,
+            R8::R8E => 0b011,
+            R8::R8H => 0b100,
+            R8::R8L => 0b101,
+            R8::R8HLRef => 0b110,
+            R8::R8A => 0b111,
         }
     }
 
-    fn from_operand(operand: u8) -> Self {
+    pub fn from_operand(operand: u8) -> Self {
         match operand {
-            0b000 => R8::B,
-            0b001 => R8::C,
-            0b010 => R8::D,
-            0b011 => R8::E,
-            0b100 => R8::H,
-            0b101 => R8::L,
-            0b110 => R8::HLRef,
-            0b111 => R8::A,
+            0b000 => R8::R8B,
+            0b001 => R8::R8C,
+            0b010 => R8::R8D,
+            0b011 => R8::R8E,
+            0b100 => R8::R8H,
+            0b101 => R8::R8L,
+            0b110 => R8::R8HLRef,
+            0b111 => R8::R8A,
             _ => unimplemented!("LoadOperand::from_operand({:#04x})", operand),
         }
     }
@@ -260,19 +260,29 @@ impl R8 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum R16Stack {
-    BC,
-    DE,
-    HL,
-    AF,
+    R16StackBC,
+    R16StackDE,
+    R16StackHL,
+    R16StackAF,
 }
 
 impl R16Stack {
-    fn as_operand(&self) -> u8 {
+    pub fn as_operand(&self) -> u8 {
         match self {
-            R16Stack::BC => 0b00,
-            R16Stack::DE => 0b01,
-            R16Stack::HL => 0b10,
-            R16Stack::AF => 0b11,
+            R16Stack::R16StackBC => 0b00,
+            R16Stack::R16StackDE => 0b01,
+            R16Stack::R16StackHL => 0b10,
+            R16Stack::R16StackAF => 0b11,
+        }
+    }
+
+    pub fn from_operand(operand: u8) -> Self {
+        match operand {
+            0b00 => R16Stack::R16StackBC,
+            0b01 => R16Stack::R16StackDE,
+            0b10 => R16Stack::R16StackHL,
+            0b11 => R16Stack::R16StackAF,
+            _ => unimplemented!("R16Stack::from_operand({:#04x})", operand),
         }
     }
 }
@@ -280,39 +290,39 @@ impl R16Stack {
 impl Display for R16Stack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            R16Stack::BC => write!(f, "bc"),
-            R16Stack::DE => write!(f, "de"),
-            R16Stack::HL => write!(f, "hl"),
-            R16Stack::AF => write!(f, "af"),
+            R16Stack::R16StackBC => write!(f, "bc"),
+            R16Stack::R16StackDE => write!(f, "de"),
+            R16Stack::R16StackHL => write!(f, "hl"),
+            R16Stack::R16StackAF => write!(f, "af"),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Cond {
-    NZ,
-    Z,
-    NC,
-    C,
+    CondNZ,
+    CondZ,
+    CondNC,
+    CondC,
 }
 
 impl Cond {
-    fn from_operand(operand: u8) -> Self {
+    pub fn from_operand(operand: u8) -> Self {
         match operand {
-            0b00 => Cond::NZ,
-            0b01 => Cond::Z,
-            0b10 => Cond::NC,
-            0b11 => Cond::C,
+            0b00 => Cond::CondNZ,
+            0b01 => Cond::CondZ,
+            0b10 => Cond::CondNC,
+            0b11 => Cond::CondC,
             _ => unimplemented!("Conditions::from_operand({:#04x})", operand),
         }
     }
 
-    fn as_operand(&self) -> u8 {
+    pub fn as_operand(&self) -> u8 {
         match self {
-            Cond::NZ => 0b00,
-            Cond::Z => 0b01,
-            Cond::NC => 0b10,
-            Cond::C => 0b11,
+            Cond::CondNZ => 0b00,
+            Cond::CondZ => 0b01,
+            Cond::CondNC => 0b10,
+            Cond::CondC => 0b11,
         }
     }
 }
@@ -320,10 +330,10 @@ impl Cond {
 impl Display for Cond {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Cond::NZ => write!(f, "nz"),
-            Cond::Z => write!(f, "z"),
-            Cond::NC => write!(f, "nc"),
-            Cond::C => write!(f, "c"),
+            Cond::CondNZ => write!(f, "nz"),
+            Cond::CondZ => write!(f, "z"),
+            Cond::CondNC => write!(f, "nc"),
+            Cond::CondC => write!(f, "c"),
         }
     }
 }
@@ -436,22 +446,22 @@ impl Display for Instruction {
             Instruction::LoadR8N8(r8, imm8) => write!(f, "ld {}, {}", r8, imm8),
             Instruction::LoadR8R8(r8_dst, r8_src) => write!(f, "ld {}, {}", r8_dst, r8_src),
             Instruction::LoadACH => write!(f, "ldh a, [c]"),
-            Instruction::LoadAA8H(imm8) => write!(f, "ldh a, [0x{:02x}]", imm8),
+            Instruction::LoadAA8H(imm8) => write!(f, "ldh a, [${:02x}]", imm8),
 
             Instruction::StoreAA16(imm16) => write!(f, "ld [{}], A", imm16),
             Instruction::StoreACH => write!(f, "ldh [c], a"),
             Instruction::StoreAR16Mem(dest) => write!(f, "ld [{}], a", dest),
-            Instruction::StoreAA8H(imm8) => write!(f, "ldh [0x{:02x}], a", imm8),
+            Instruction::StoreAA8H(imm8) => write!(f, "ldh [${:02x}], a", imm8),
             Instruction::StoreSPA16(imm16) => write!(f, "ld [{}], sp", imm16),
 
             Instruction::PushR16Stack(operand) => write!(f, "push {}", operand),
             Instruction::PopR16Stack(operand) => write!(f, "pop {}", operand),
-            Instruction::CallA16(a16) => write!(f, "call {:#04x}", a16),
-            Instruction::CallCondA16(cond, a16) => write!(f, "call {}, {:#04x}", cond, a16),
+            Instruction::CallA16(a16) => write!(f, "call #{:04x}", a16),
+            Instruction::CallCondA16(cond, a16) => write!(f, "call {}, ${:04x}", cond, a16),
             Instruction::JumpNear(e8) => write!(f, "jr {:+}", e8),
             Instruction::JumpNearCond(e8, cond) => write!(f, "jr {}, {:+}", cond, e8),
-            Instruction::JumpFar(a16) => write!(f, "jp {:#04x}", a16),
-            Instruction::JumpFarCond(cond, a16) => write!(f, "jp {}, {:#04x}", cond, a16),
+            Instruction::JumpFar(a16) => write!(f, "jp ${:04x}", a16),
+            Instruction::JumpFarCond(cond, a16) => write!(f, "jp {}, ${:04x}", cond, a16),
             Instruction::Ret => write!(f, "ret"),
             Instruction::RetCond(cond) => write!(f, "ret {}", cond),
             Instruction::IncR16(r16) => write!(f, "inc {}", r16),
@@ -535,159 +545,83 @@ impl Instruction {
         Ok(size)
     }
 
-    pub fn size_header_2(insn: u8) -> Result<u8, InstructionError> {
-        if ILLEGAL_INSTRUCTIONS.contains(&insn) {
-            return Err(InstructionError::Illegal(insn).into());
-        }
-        let size = if insn == 0xCB {
-            2
-        } else {
-            match insn >> 6 {
-                0b00 => match insn & 0x0F {
-                    0x0 if insn == 0x0 => 1,  // NOP
-                    0x0 if insn == 0x10 => 2, // STOP
-                    0x1 => 3,                 // LD r16, imm16
-                    0x2 => 1,                 // LD [r16mem], A
-                    0x3 => 1,                 // INC r16
-                    0x8 if insn == 0x8 => 3,  // LD [imm16], SP
-                    0xa => 1,                 // LD A, [r16mem]
-                    0xb => 1,                 // DEC r16
-                    0x9 => 1,                 // ADD HL, r16
-                    0x7 | 0xf => 1,
-                    _ => match insn & 0x7 {
-                        0x0 => 2, // JR e8
-                        0x4 => 1, // INC r8
-                        0x5 => 1, // DEC r8
-                        0x6 => 2, // LD r8, imm8
-                        _ => return Err(InstructionError::Unknown(insn).into()),
-                    },
-                },
-                0b01 => 1,
-                0b10 => 1,
-                0b11 => match insn {
-                    0xe0 => 2,
-                    0xcd => 3,
-                    0xea => 3, // ld [imm16], a
-                    0xf0 => 2, // ldh a, [imm8]
-                    0xfa => 3, // ld a, [imm16]
-                    0xe2 | 0xf2 => 1,
-                    0xc4 | 0xCC | 0xd4 | 0xdc => 3, // call cond, imm16
-                    0xF3 | 0xFB | 0xD9 => 1,        // ei, di, reti
-                    0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => 1, // rst
-                    0xe8 => 2,                      // add sp, imm8
-                    0xe9 => 1,                      // jp [hl]
-                    0xf8 => 2,                      // ld hl, sp+imm8
-                    0xf9 => 1,                      // ld sp, hl
-                    0xc6 | 0xce | 0xd6 | 0xde | 0xe6 | 0xee | 0xf6 | 0xfe => 2, // alu a, imm8
-                    0xf5 | 0xe5 | 0xd5 | 0xc5 => 1, // push
-                    0xc1 | 0xd1 | 0xe1 | 0xf1 => 1, // pop
-                    0xC2 | 0xCA | 0xD2 | 0xDA | 0xC3 => 3, // jp
-                    0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
-                    _ => return Err(InstructionError::Unknown(insn).into()),
-                },
-                _ => return Err(InstructionError::Unknown(insn).into()),
-            }
-        };
-        Ok(size)
-    }
-
     pub fn encode(&self) -> Vec<u8> {
         match self {
-            Instruction::Nop => vec![0x0],
-            Instruction::Halt => vec![0x76],
-            Instruction::StopN8(n8) => vec![0x10, *n8],
-            Instruction::Reti => vec![0xD9],
-            Instruction::Di => vec![0xF3],
-            Instruction::Ei => vec![0xFB],
-            Instruction::CallA16(a16) => vec![0xcd, *a16 as u8, (*a16 >> 8) as u8],
-            Instruction::CallCondA16(cond, a16) => {
-                vec![0xc4 | cond.as_operand() << 3, *a16 as u8, (*a16 >> 8) as u8]
+            Instruction::Nop => vec![self.opcode()],
+            Instruction::Halt => vec![self.opcode()],
+            Instruction::StopN8(n8) => vec![self.opcode(), *n8],
+            Instruction::Reti => vec![self.opcode()],
+            Instruction::Di => vec![self.opcode()],
+            Instruction::Ei => vec![self.opcode()],
+            Instruction::CallA16(a16) => vec![self.opcode(), *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::CallCondA16(_, a16) => vec![self.opcode(), *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::JumpNear(e8) => vec![self.opcode(), *e8 as u8],
+            Instruction::JumpNearCond(_, e8) => vec![self.opcode(), *e8 as u8],
+            Instruction::JumpFar(a16) => vec![self.opcode(), *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::JumpFarCond(_, a16) => vec![self.opcode(), *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::Ret => vec![self.opcode()],
+            Instruction::RetCond(_) => vec![self.opcode()],
+            Instruction::LoadR16N16(_, val) => vec![self.opcode(), *val as u8, (*val >> 8) as u8],
+            Instruction::LoadAR16Mem(_) => vec![self.opcode()],
+            Instruction::LoadAA16(addr) => vec![self.opcode(), *addr as u8, (*addr >> 8) as u8],
+            Instruction::LoadR8N8(_, val) => vec![self.opcode(), *val],
+            Instruction::LoadR8R8(_, _) => vec![self.opcode()],
+            Instruction::LoadACH => vec![self.opcode()],
+            Instruction::LoadAA8H(addr) => vec![self.opcode(), *addr],
+            Instruction::StoreACH => vec![self.opcode()],
+            Instruction::StoreAA16(addr) => vec![self.opcode(), *addr as u8, (*addr >> 8) as u8],
+            Instruction::StoreAR16Mem(_) => vec![self.opcode()],
+            Instruction::StoreAA8H(addr) => vec![self.opcode(), (*addr & 0xff) as u8],
+            Instruction::StoreSPA16(imm16) => {
+                vec![self.opcode(), *imm16 as u8, (*imm16 >> 8) as u8]
             }
-            Instruction::JumpNear(e8) => vec![0x18, *e8 as u8],
-            Instruction::JumpNearCond(cond, e8) => vec![0x20 | cond.as_operand() << 3, *e8 as u8],
-            Instruction::JumpFar(a16) => vec![0xc3, *a16 as u8, (*a16 >> 8) as u8],
-            Instruction::JumpFarCond(cond, a16) => {
-                vec![0xc2 | cond.as_operand() << 3, *a16 as u8, (*a16 >> 8) as u8]
-            }
-            Instruction::Ret => vec![0xc9],
-            Instruction::RetCond(cond) => vec![0xc0 | cond.as_operand() << 3],
-            Instruction::LoadR16N16(op, val) => {
-                vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
-            }
-            Instruction::LoadAR16Mem(mem) => vec![0xa | mem.as_operand() << 4],
-            Instruction::LoadAA16(addr) => vec![0xfa, *addr as u8, (*addr >> 8) as u8],
-            Instruction::LoadR8N8(dest, val) => vec![0x06 | dest.as_operand() << 3, *val],
-            Instruction::LoadR8R8(target, source) => {
-                vec![0b01_000_000 | target.as_operand() << 3 | source.as_operand()]
-            }
-            Instruction::LoadACH => vec![0xf2],
-            Instruction::LoadAA8H(addr) => vec![0xf0, *addr],
-            Instruction::StoreACH => vec![0xe2],
-            Instruction::StoreAA16(addr) => vec![0xEA, *addr as u8, (*addr >> 8) as u8],
-            Instruction::StoreAR16Mem(dest) => vec![0x2 | dest.as_operand() << 4],
-            Instruction::StoreAA8H(addr) => vec![0xe0, (*addr & 0xff) as u8],
-            Instruction::StoreSPA16(imm16) => vec![0x08, *imm16 as u8, (*imm16 >> 8) as u8],
-            Instruction::PushR16Stack(operand) => vec![operand.as_operand() << 4 | 0b11_000_101],
-            Instruction::PopR16Stack(operand) => vec![operand.as_operand() << 4 | 0b11_000_001],
-            Instruction::IncR16(r16) => vec![0x3 | r16.as_operand() << 4],
-            Instruction::IncR8(r8) => vec![0x4 | r8.as_operand() << 3],
-            Instruction::DecR16(r16) => vec![0xb | r16.as_operand() << 4],
-            Instruction::DecR8(r8) => vec![0x5 | r8.as_operand() << 3],
-            Instruction::AddHLR16(r16) => vec![0x9 | r16.as_operand() << 4],
-
-            Instruction::AddAN8(n8) => vec![0xC6, *n8],
-            Instruction::AdcAN8(n8) => vec![0xCE, *n8],
-            Instruction::SubAN8(n8) => vec![0xD6, *n8],
-            Instruction::SbcAN8(n8) => vec![0xDE, *n8],
-            Instruction::AndAN8(n8) => vec![0xE6, *n8],
-            Instruction::XorAN8(n8) => vec![0xEE, *n8],
-            Instruction::OrAN8(n8) => vec![0xF6, *n8],
-            Instruction::CpAN8(n8) => vec![0xFE, *n8],
-
-            Instruction::AddR8(source) => vec![0x10 << 3 | source.as_operand()],
-            Instruction::AdcR8(source) => vec![0x11 << 3 | source.as_operand()],
-            Instruction::SubR8(source) => vec![0x12 << 3 | source.as_operand()],
-            Instruction::SbcR8(source) => vec![0x13 << 3 | source.as_operand()],
-            Instruction::AndR8(source) => vec![0x14 << 3 | source.as_operand()],
-            Instruction::XorR8(source) => vec![0x15 << 3 | source.as_operand()],
-            Instruction::OrR8(source) => vec![0x16 << 3 | source.as_operand()],
-            Instruction::CpR8(source) => vec![0x17 << 3 | source.as_operand()],
-
-            Instruction::RlcA => vec![0x07],
-            Instruction::RrcA => vec![0x0F],
-            Instruction::RlA => vec![0x17],
-            Instruction::RrA => vec![0x1F],
-            Instruction::Daa => vec![0x27],
-            Instruction::Cpl => vec![0x2F],
-            Instruction::Scf => vec![0x37],
-            Instruction::Ccf => vec![0x3F],
-
-            Instruction::Rlc(r8) => vec![0xCB, r8.as_operand()],
-            Instruction::Rrc(r8) => vec![0xCB, r8.as_operand() | 0x8],
-            Instruction::Rl(r8) => vec![0xCB, r8.as_operand() | 0x10],
-            Instruction::Rr(r8) => vec![0xCB, r8.as_operand() | 0x18],
-            Instruction::Sla(r8) => vec![0xCB, r8.as_operand() | 0x20],
-            Instruction::Sra(r8) => vec![0xCB, r8.as_operand() | 0x28],
-            Instruction::Swap(r8) => vec![0xCB, r8.as_operand() | 0x30],
-            Instruction::Srl(r8) => vec![0xCB, r8.as_operand() | 0x38],
-
-            Instruction::Bit(b3, r8) => {
-                vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
-            }
-            Instruction::Res(b3, r8) => {
-                vec![0xCB, 0b10_000_000 | b3.encode() << 3 | r8.as_operand()]
-            }
-            Instruction::Set(b3, r8) => {
-                vec![0xCB, 0b11_000_000 | b3.encode() << 3 | r8.as_operand()]
-            }
-
-            Instruction::Rst(tgt3) => {
-                vec![0xc7 | tgt3.as_operand() << 3]
-            }
-            Instruction::AddSPN8(n8) => vec![0xE8, *n8],
-            Instruction::JumpFarHL => vec![0xE9],
-            Instruction::LoadHLSPN8(n8) => vec![0xF8, *n8],
-            Instruction::LoadHLSP => vec![0xF9],
+            Instruction::PushR16Stack(_) => vec![self.opcode()],
+            Instruction::PopR16Stack(_) => vec![self.opcode()],
+            Instruction::IncR16(_) => vec![self.opcode()],
+            Instruction::IncR8(_) => vec![self.opcode()],
+            Instruction::DecR16(_) => vec![self.opcode()],
+            Instruction::DecR8(_) => vec![self.opcode()],
+            Instruction::AddHLR16(_) => vec![self.opcode()],
+            Instruction::AddAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::AdcAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::SubAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::SbcAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::AndAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::XorAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::OrAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::CpAN8(n8) => vec![self.opcode(), *n8],
+            Instruction::AddR8(_) => vec![self.opcode()],
+            Instruction::AdcR8(_) => vec![self.opcode()],
+            Instruction::SubR8(_) => vec![self.opcode()],
+            Instruction::SbcR8(_) => vec![self.opcode()],
+            Instruction::AndR8(_) => vec![self.opcode()],
+            Instruction::XorR8(_) => vec![self.opcode()],
+            Instruction::OrR8(_) => vec![self.opcode()],
+            Instruction::CpR8(_) => vec![self.opcode()],
+            Instruction::RlcA => vec![self.opcode()],
+            Instruction::RrcA => vec![self.opcode()],
+            Instruction::RlA => vec![self.opcode()],
+            Instruction::RrA => vec![self.opcode()],
+            Instruction::Daa => vec![self.opcode()],
+            Instruction::Cpl => vec![self.opcode()],
+            Instruction::Scf => vec![self.opcode()],
+            Instruction::Ccf => vec![self.opcode()],
+            Instruction::Rlc(_) => vec![0xCB, self.opcode()],
+            Instruction::Rrc(_) => vec![0xCB, self.opcode()],
+            Instruction::Rl(_) => vec![0xCB, self.opcode()],
+            Instruction::Rr(_) => vec![0xCB, self.opcode()],
+            Instruction::Sla(_) => vec![0xCB, self.opcode()],
+            Instruction::Sra(_) => vec![0xCB, self.opcode()],
+            Instruction::Swap(_) => vec![0xCB, self.opcode()],
+            Instruction::Srl(_) => vec![0xCB, self.opcode()],
+            Instruction::Bit(_, _) => vec![0xCB, self.opcode()],
+            Instruction::Res(_, _) => vec![0xCB, self.opcode()],
+            Instruction::Set(_, _) => vec![0xCB, self.opcode()],
+            Instruction::Rst(_) => vec![self.opcode()],
+            Instruction::AddSPN8(n8) => vec![self.opcode(), *n8],
+            Instruction::JumpFarHL => vec![self.opcode()],
+            Instruction::LoadHLSPN8(n8) => vec![self.opcode(), *n8],
+            Instruction::LoadHLSP => vec![self.opcode()],
         }
     }
 
@@ -802,8 +736,8 @@ impl Instruction {
             Instruction::LoadR16N16(_, _) => (12, 12),
             Instruction::LoadAA16(_) => (16, 16),
             Instruction::LoadR8N8(_, _) => (8, 8),
-            Instruction::LoadR8R8(R8::HLRef, _) => (8, 8),
-            Instruction::LoadR8R8(_, R8::HLRef) => (8, 8),
+            Instruction::LoadR8R8(R8::R8HLRef, _) => (8, 8),
+            Instruction::LoadR8R8(_, R8::R8HLRef) => (8, 8),
             Instruction::LoadR8R8(_, _) => (4, 4),
             Instruction::LoadACH => (8, 8),
             Instruction::LoadAA8H(_) => (12, 12),
@@ -880,186 +814,1039 @@ impl Instruction {
         ((hi as u16) << 8) | (lo as u16)
     }
 
+    fn opcode(&self) -> u8 {
+        match self {
+            Instruction::Nop => 0x0,
+            Instruction::LoadR16N16(R16::R16BC, _) => 0x1,
+            Instruction::StoreAR16Mem(R16Mem::R16MemBC) => 0x2,
+            Instruction::IncR16(R16::R16BC) => 0x3,
+            Instruction::IncR8(R8::R8B) => 0x4,
+            Instruction::DecR8(R8::R8B) => 0x5,
+            Instruction::LoadR8N8(R8::R8B, _) => 0x6,
+            Instruction::RlcA => 0x7,
+            Instruction::StoreSPA16(_) => 0x8,
+            Instruction::AddHLR16(R16::R16BC) => 0x9,
+            Instruction::LoadAR16Mem(R16Mem::R16MemBC) => 0xa,
+            Instruction::DecR16(R16::R16BC) => 0xb,
+            Instruction::IncR8(R8::R8C) => 0xc,
+            Instruction::DecR8(R8::R8C) => 0xd,
+            Instruction::LoadR8N8(R8::R8C, _) => 0xe,
+            Instruction::RrcA => 0xf,
+            Instruction::StopN8(_) => 0x10,
+            Instruction::LoadR16N16(R16::R16DE, _) => 0x11,
+            Instruction::StoreAR16Mem(R16Mem::R16MemDE) => 0x12,
+            Instruction::IncR16(R16::R16DE) => 0x13,
+            Instruction::IncR8(R8::R8D) => 0x14,
+            Instruction::DecR8(R8::R8D) => 0x15,
+            Instruction::LoadR8N8(R8::R8D, _) => 0x16,
+            Instruction::RlA => 0x17,
+            Instruction::JumpNear(_) => 0x18,
+            Instruction::AddHLR16(R16::R16DE) => 0x19,
+            Instruction::LoadAR16Mem(R16Mem::R16MemDE) => 0x1a,
+            Instruction::DecR16(R16::R16DE) => 0x1b,
+            Instruction::IncR8(R8::R8E) => 0x1c,
+            Instruction::DecR8(R8::R8E) => 0x1d,
+            Instruction::LoadR8N8(R8::R8E, _) => 0x1e,
+            Instruction::RrA => 0x1f,
+            Instruction::JumpNearCond(Cond::CondNZ, _) => 0x20,
+            Instruction::LoadR16N16(R16::R16HL, _) => 0x21,
+            Instruction::StoreAR16Mem(R16Mem::R16MemHLInc) => 0x22,
+            Instruction::IncR16(R16::R16HL) => 0x23,
+            Instruction::IncR8(R8::R8H) => 0x24,
+            Instruction::DecR8(R8::R8H) => 0x25,
+            Instruction::LoadR8N8(R8::R8H, _) => 0x26,
+            Instruction::Daa => 0x27,
+            Instruction::JumpNearCond(Cond::CondZ, _) => 0x28,
+            Instruction::AddHLR16(R16::R16HL) => 0x29,
+            Instruction::LoadAR16Mem(R16Mem::R16MemHLInc) => 0x2a,
+            Instruction::DecR16(R16::R16HL) => 0x2b,
+            Instruction::IncR8(R8::R8L) => 0x2c,
+            Instruction::DecR8(R8::R8L) => 0x2d,
+            Instruction::LoadR8N8(R8::R8L, _) => 0x2e,
+            Instruction::Cpl => 0x2f,
+            Instruction::JumpNearCond(Cond::CondNC, _) => 0x30,
+            Instruction::LoadR16N16(R16::R16Sp, _) => 0x31,
+            Instruction::StoreAR16Mem(R16Mem::R16MemHLDec) => 0x32,
+            Instruction::IncR16(R16::R16Sp) => 0x33,
+            Instruction::IncR8(R8::R8HLRef) => 0x34,
+            Instruction::DecR8(R8::R8HLRef) => 0x35,
+            Instruction::LoadR8N8(R8::R8HLRef, _) => 0x36,
+            Instruction::Scf => 0x37,
+            Instruction::JumpNearCond(Cond::CondC, _) => 0x38,
+            Instruction::AddHLR16(R16::R16Sp) => 0x39,
+            Instruction::LoadAR16Mem(R16Mem::R16MemHLDec) => 0x3a,
+            Instruction::DecR16(R16::R16Sp) => 0x3b,
+            Instruction::IncR8(R8::R8A) => 0x3c,
+            Instruction::DecR8(R8::R8A) => 0x3d,
+            Instruction::LoadR8N8(R8::R8A, _) => 0x3e,
+            Instruction::Ccf => 0x3f,
+            Instruction::LoadR8R8(R8::R8B, R8::R8B) => 0x40,
+            Instruction::LoadR8R8(R8::R8B, R8::R8C) => 0x41,
+            Instruction::LoadR8R8(R8::R8B, R8::R8D) => 0x42,
+            Instruction::LoadR8R8(R8::R8B, R8::R8E) => 0x43,
+            Instruction::LoadR8R8(R8::R8B, R8::R8H) => 0x44,
+            Instruction::LoadR8R8(R8::R8B, R8::R8L) => 0x45,
+            Instruction::LoadR8R8(R8::R8B, R8::R8HLRef) => 0x46,
+            Instruction::LoadR8R8(R8::R8B, R8::R8A) => 0x47,
+            Instruction::LoadR8R8(R8::R8C, R8::R8B) => 0x48,
+            Instruction::LoadR8R8(R8::R8C, R8::R8C) => 0x49,
+            Instruction::LoadR8R8(R8::R8C, R8::R8D) => 0x4a,
+            Instruction::LoadR8R8(R8::R8C, R8::R8E) => 0x4b,
+            Instruction::LoadR8R8(R8::R8C, R8::R8H) => 0x4c,
+            Instruction::LoadR8R8(R8::R8C, R8::R8L) => 0x4d,
+            Instruction::LoadR8R8(R8::R8C, R8::R8HLRef) => 0x4e,
+            Instruction::LoadR8R8(R8::R8C, R8::R8A) => 0x4f,
+            Instruction::LoadR8R8(R8::R8D, R8::R8B) => 0x50,
+            Instruction::LoadR8R8(R8::R8D, R8::R8C) => 0x51,
+            Instruction::LoadR8R8(R8::R8D, R8::R8D) => 0x52,
+            Instruction::LoadR8R8(R8::R8D, R8::R8E) => 0x53,
+            Instruction::LoadR8R8(R8::R8D, R8::R8H) => 0x54,
+            Instruction::LoadR8R8(R8::R8D, R8::R8L) => 0x55,
+            Instruction::LoadR8R8(R8::R8D, R8::R8HLRef) => 0x56,
+            Instruction::LoadR8R8(R8::R8D, R8::R8A) => 0x57,
+            Instruction::LoadR8R8(R8::R8E, R8::R8B) => 0x58,
+            Instruction::LoadR8R8(R8::R8E, R8::R8C) => 0x59,
+            Instruction::LoadR8R8(R8::R8E, R8::R8D) => 0x5a,
+            Instruction::LoadR8R8(R8::R8E, R8::R8E) => 0x5b,
+            Instruction::LoadR8R8(R8::R8E, R8::R8H) => 0x5c,
+            Instruction::LoadR8R8(R8::R8E, R8::R8L) => 0x5d,
+            Instruction::LoadR8R8(R8::R8E, R8::R8HLRef) => 0x5e,
+            Instruction::LoadR8R8(R8::R8E, R8::R8A) => 0x5f,
+            Instruction::LoadR8R8(R8::R8H, R8::R8B) => 0x60,
+            Instruction::LoadR8R8(R8::R8H, R8::R8C) => 0x61,
+            Instruction::LoadR8R8(R8::R8H, R8::R8D) => 0x62,
+            Instruction::LoadR8R8(R8::R8H, R8::R8E) => 0x63,
+            Instruction::LoadR8R8(R8::R8H, R8::R8H) => 0x64,
+            Instruction::LoadR8R8(R8::R8H, R8::R8L) => 0x65,
+            Instruction::LoadR8R8(R8::R8H, R8::R8HLRef) => 0x66,
+            Instruction::LoadR8R8(R8::R8H, R8::R8A) => 0x67,
+            Instruction::LoadR8R8(R8::R8L, R8::R8B) => 0x68,
+            Instruction::LoadR8R8(R8::R8L, R8::R8C) => 0x69,
+            Instruction::LoadR8R8(R8::R8L, R8::R8D) => 0x6a,
+            Instruction::LoadR8R8(R8::R8L, R8::R8E) => 0x6b,
+            Instruction::LoadR8R8(R8::R8L, R8::R8H) => 0x6c,
+            Instruction::LoadR8R8(R8::R8L, R8::R8L) => 0x6d,
+            Instruction::LoadR8R8(R8::R8L, R8::R8HLRef) => 0x6e,
+            Instruction::LoadR8R8(R8::R8L, R8::R8A) => 0x6f,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8B) => 0x70,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8C) => 0x71,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8D) => 0x72,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8E) => 0x73,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8H) => 0x74,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8L) => 0x75,
+            Instruction::Halt => 0x76,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8A) => 0x77,
+            Instruction::LoadR8R8(R8::R8A, R8::R8B) => 0x78,
+            Instruction::LoadR8R8(R8::R8A, R8::R8C) => 0x79,
+            Instruction::LoadR8R8(R8::R8A, R8::R8D) => 0x7a,
+            Instruction::LoadR8R8(R8::R8A, R8::R8E) => 0x7b,
+            Instruction::LoadR8R8(R8::R8A, R8::R8H) => 0x7c,
+            Instruction::LoadR8R8(R8::R8A, R8::R8L) => 0x7d,
+            Instruction::LoadR8R8(R8::R8A, R8::R8HLRef) => 0x7e,
+            Instruction::LoadR8R8(R8::R8A, R8::R8A) => 0x7f,
+            Instruction::AddR8(R8::R8B) => 0x80,
+            Instruction::AddR8(R8::R8C) => 0x81,
+            Instruction::AddR8(R8::R8D) => 0x82,
+            Instruction::AddR8(R8::R8E) => 0x83,
+            Instruction::AddR8(R8::R8H) => 0x84,
+            Instruction::AddR8(R8::R8L) => 0x85,
+            Instruction::AddR8(R8::R8HLRef) => 0x86,
+            Instruction::AddR8(R8::R8A) => 0x87,
+            Instruction::AdcR8(R8::R8B) => 0x88,
+            Instruction::AdcR8(R8::R8C) => 0x89,
+            Instruction::AdcR8(R8::R8D) => 0x8a,
+            Instruction::AdcR8(R8::R8E) => 0x8b,
+            Instruction::AdcR8(R8::R8H) => 0x8c,
+            Instruction::AdcR8(R8::R8L) => 0x8d,
+            Instruction::AdcR8(R8::R8HLRef) => 0x8e,
+            Instruction::AdcR8(R8::R8A) => 0x8f,
+            Instruction::SubR8(R8::R8B) => 0x90,
+            Instruction::SubR8(R8::R8C) => 0x91,
+            Instruction::SubR8(R8::R8D) => 0x92,
+            Instruction::SubR8(R8::R8E) => 0x93,
+            Instruction::SubR8(R8::R8H) => 0x94,
+            Instruction::SubR8(R8::R8L) => 0x95,
+            Instruction::SubR8(R8::R8HLRef) => 0x96,
+            Instruction::SubR8(R8::R8A) => 0x97,
+            Instruction::SbcR8(R8::R8B) => 0x98,
+            Instruction::SbcR8(R8::R8C) => 0x99,
+            Instruction::SbcR8(R8::R8D) => 0x9a,
+            Instruction::SbcR8(R8::R8E) => 0x9b,
+            Instruction::SbcR8(R8::R8H) => 0x9c,
+            Instruction::SbcR8(R8::R8L) => 0x9d,
+            Instruction::SbcR8(R8::R8HLRef) => 0x9e,
+            Instruction::SbcR8(R8::R8A) => 0x9f,
+            Instruction::AndR8(R8::R8B) => 0xa0,
+            Instruction::AndR8(R8::R8C) => 0xa1,
+            Instruction::AndR8(R8::R8D) => 0xa2,
+            Instruction::AndR8(R8::R8E) => 0xa3,
+            Instruction::AndR8(R8::R8H) => 0xa4,
+            Instruction::AndR8(R8::R8L) => 0xa5,
+            Instruction::AndR8(R8::R8HLRef) => 0xa6,
+            Instruction::AndR8(R8::R8A) => 0xa7,
+            Instruction::XorR8(R8::R8B) => 0xa8,
+            Instruction::XorR8(R8::R8C) => 0xa9,
+            Instruction::XorR8(R8::R8D) => 0xaa,
+            Instruction::XorR8(R8::R8E) => 0xab,
+            Instruction::XorR8(R8::R8H) => 0xac,
+            Instruction::XorR8(R8::R8L) => 0xad,
+            Instruction::XorR8(R8::R8HLRef) => 0xae,
+            Instruction::XorR8(R8::R8A) => 0xaf,
+            Instruction::OrR8(R8::R8B) => 0xb0,
+            Instruction::OrR8(R8::R8C) => 0xb1,
+            Instruction::OrR8(R8::R8D) => 0xb2,
+            Instruction::OrR8(R8::R8E) => 0xb3,
+            Instruction::OrR8(R8::R8H) => 0xb4,
+            Instruction::OrR8(R8::R8L) => 0xb5,
+            Instruction::OrR8(R8::R8HLRef) => 0xb6,
+            Instruction::OrR8(R8::R8A) => 0xb7,
+            Instruction::CpR8(R8::R8B) => 0xb8,
+            Instruction::CpR8(R8::R8C) => 0xb9,
+            Instruction::CpR8(R8::R8D) => 0xba,
+            Instruction::CpR8(R8::R8E) => 0xbb,
+            Instruction::CpR8(R8::R8H) => 0xbc,
+            Instruction::CpR8(R8::R8L) => 0xbd,
+            Instruction::CpR8(R8::R8HLRef) => 0xbe,
+            Instruction::CpR8(R8::R8A) => 0xbf,
+            Instruction::RetCond(Cond::CondNZ) => 0xc0,
+            Instruction::PopR16Stack(R16Stack::R16StackBC) => 0xc1,
+            Instruction::JumpFarCond(Cond::CondNZ, _) => 0xc2,
+            Instruction::JumpFar(_) => 0xc3,
+            Instruction::CallCondA16(Cond::CondNZ, _) => 0xc4,
+            Instruction::PushR16Stack(R16Stack::R16StackBC) => 0xc5,
+            Instruction::AddAN8(_) => 0xc6,
+            Instruction::Rst(Tgt3::T0) => 0xc7,
+            Instruction::RetCond(Cond::CondZ) => 0xc8,
+            Instruction::Ret => 0xc9,
+            Instruction::JumpFarCond(Cond::CondZ, _) => 0xca,
+            Instruction::CallCondA16(Cond::CondZ, _) => 0xcc,
+            Instruction::CallA16(_) => 0xcd,
+            Instruction::AdcAN8(_) => 0xce,
+            Instruction::Rst(Tgt3::T1) => 0xcf,
+            Instruction::RetCond(Cond::CondNC) => 0xd0,
+            Instruction::PopR16Stack(R16Stack::R16StackDE) => 0xd1,
+            Instruction::JumpFarCond(Cond::CondNC, _) => 0xd2,
+            Instruction::CallCondA16(Cond::CondNC, _) => 0xd4,
+            Instruction::PushR16Stack(R16Stack::R16StackDE) => 0xd5,
+            Instruction::SubAN8(_) => 0xd6,
+            Instruction::Rst(Tgt3::T2) => 0xd7,
+            Instruction::RetCond(Cond::CondC) => 0xd8,
+            Instruction::Reti => 0xd9,
+            Instruction::JumpFarCond(Cond::CondC, _) => 0xda,
+            Instruction::CallCondA16(Cond::CondC, _) => 0xdc,
+            Instruction::SbcAN8(_) => 0xde,
+            Instruction::Rst(Tgt3::T3) => 0xdf,
+            Instruction::StoreAA8H(_) => 0xe0,
+            Instruction::PopR16Stack(R16Stack::R16StackHL) => 0xe1,
+            Instruction::StoreACH => 0xe2,
+            Instruction::PushR16Stack(R16Stack::R16StackHL) => 0xe5,
+            Instruction::AndAN8(_) => 0xe6,
+            Instruction::Rst(Tgt3::T4) => 0xe7,
+            Instruction::AddSPN8(_) => 0xe8,
+            Instruction::JumpFarHL => 0xe9,
+            Instruction::StoreAA16(_) => 0xea,
+            Instruction::XorAN8(_) => 0xee,
+            Instruction::Rst(Tgt3::T5) => 0xef,
+            Instruction::LoadAA8H(_) => 0xf0,
+            Instruction::PopR16Stack(R16Stack::R16StackAF) => 0xf1,
+            Instruction::LoadACH => 0xf2,
+            Instruction::Di => 0xf3,
+            Instruction::PushR16Stack(R16Stack::R16StackAF) => 0xf5,
+            Instruction::OrAN8(_) => 0xf6,
+            Instruction::Rst(Tgt3::T6) => 0xf7,
+            Instruction::LoadHLSPN8(_) => 0xf8,
+            Instruction::LoadHLSP => 0xf9,
+            Instruction::LoadAA16(_) => 0xfa,
+            Instruction::Ei => 0xfb,
+            Instruction::CpAN8(_) => 0xfe,
+            Instruction::Rst(Tgt3::T7) => 0xff,
+
+            Instruction::Rlc(R8::R8B) => 0x0,
+            Instruction::Rlc(R8::R8C) => 0x1,
+            Instruction::Rlc(R8::R8D) => 0x2,
+            Instruction::Rlc(R8::R8E) => 0x3,
+            Instruction::Rlc(R8::R8H) => 0x4,
+            Instruction::Rlc(R8::R8L) => 0x5,
+            Instruction::Rlc(R8::R8HLRef) => 0x6,
+            Instruction::Rlc(R8::R8A) => 0x7,
+            Instruction::Rrc(R8::R8B) => 0x8,
+            Instruction::Rrc(R8::R8C) => 0x9,
+            Instruction::Rrc(R8::R8D) => 0xa,
+            Instruction::Rrc(R8::R8E) => 0xb,
+            Instruction::Rrc(R8::R8H) => 0xc,
+            Instruction::Rrc(R8::R8L) => 0xd,
+            Instruction::Rrc(R8::R8HLRef) => 0xe,
+            Instruction::Rrc(R8::R8A) => 0xf,
+            Instruction::Rl(R8::R8B) => 0x10,
+            Instruction::Rl(R8::R8C) => 0x11,
+            Instruction::Rl(R8::R8D) => 0x12,
+            Instruction::Rl(R8::R8E) => 0x13,
+            Instruction::Rl(R8::R8H) => 0x14,
+            Instruction::Rl(R8::R8L) => 0x15,
+            Instruction::Rl(R8::R8HLRef) => 0x16,
+            Instruction::Rl(R8::R8A) => 0x17,
+            Instruction::Rr(R8::R8B) => 0x18,
+            Instruction::Rr(R8::R8C) => 0x19,
+            Instruction::Rr(R8::R8D) => 0x1a,
+            Instruction::Rr(R8::R8E) => 0x1b,
+            Instruction::Rr(R8::R8H) => 0x1c,
+            Instruction::Rr(R8::R8L) => 0x1d,
+            Instruction::Rr(R8::R8HLRef) => 0x1e,
+            Instruction::Rr(R8::R8A) => 0x1f,
+            Instruction::Sla(R8::R8B) => 0x20,
+            Instruction::Sla(R8::R8C) => 0x21,
+            Instruction::Sla(R8::R8D) => 0x22,
+            Instruction::Sla(R8::R8E) => 0x23,
+            Instruction::Sla(R8::R8H) => 0x24,
+            Instruction::Sla(R8::R8L) => 0x25,
+            Instruction::Sla(R8::R8HLRef) => 0x26,
+            Instruction::Sla(R8::R8A) => 0x27,
+            Instruction::Sra(R8::R8B) => 0x28,
+            Instruction::Sra(R8::R8C) => 0x29,
+            Instruction::Sra(R8::R8D) => 0x2a,
+            Instruction::Sra(R8::R8E) => 0x2b,
+            Instruction::Sra(R8::R8H) => 0x2c,
+            Instruction::Sra(R8::R8L) => 0x2d,
+            Instruction::Sra(R8::R8HLRef) => 0x2e,
+            Instruction::Sra(R8::R8A) => 0x2f,
+            Instruction::Swap(R8::R8B) => 0x30,
+            Instruction::Swap(R8::R8C) => 0x31,
+            Instruction::Swap(R8::R8D) => 0x32,
+            Instruction::Swap(R8::R8E) => 0x33,
+            Instruction::Swap(R8::R8H) => 0x34,
+            Instruction::Swap(R8::R8L) => 0x35,
+            Instruction::Swap(R8::R8HLRef) => 0x36,
+            Instruction::Swap(R8::R8A) => 0x37,
+            Instruction::Srl(R8::R8B) => 0x38,
+            Instruction::Srl(R8::R8C) => 0x39,
+            Instruction::Srl(R8::R8D) => 0x3a,
+            Instruction::Srl(R8::R8E) => 0x3b,
+            Instruction::Srl(R8::R8H) => 0x3c,
+            Instruction::Srl(R8::R8L) => 0x3d,
+            Instruction::Srl(R8::R8HLRef) => 0x3e,
+            Instruction::Srl(R8::R8A) => 0x3f,
+            Instruction::Bit(BitRef::B0, R8::R8B) => 0x40,
+            Instruction::Bit(BitRef::B0, R8::R8C) => 0x41,
+            Instruction::Bit(BitRef::B0, R8::R8D) => 0x42,
+            Instruction::Bit(BitRef::B0, R8::R8E) => 0x43,
+            Instruction::Bit(BitRef::B0, R8::R8H) => 0x44,
+            Instruction::Bit(BitRef::B0, R8::R8L) => 0x45,
+            Instruction::Bit(BitRef::B0, R8::R8HLRef) => 0x46,
+            Instruction::Bit(BitRef::B0, R8::R8A) => 0x47,
+            Instruction::Bit(BitRef::B1, R8::R8B) => 0x48,
+            Instruction::Bit(BitRef::B1, R8::R8C) => 0x49,
+            Instruction::Bit(BitRef::B1, R8::R8D) => 0x4a,
+            Instruction::Bit(BitRef::B1, R8::R8E) => 0x4b,
+            Instruction::Bit(BitRef::B1, R8::R8H) => 0x4c,
+            Instruction::Bit(BitRef::B1, R8::R8L) => 0x4d,
+            Instruction::Bit(BitRef::B1, R8::R8HLRef) => 0x4e,
+            Instruction::Bit(BitRef::B1, R8::R8A) => 0x4f,
+            Instruction::Bit(BitRef::B2, R8::R8B) => 0x50,
+            Instruction::Bit(BitRef::B2, R8::R8C) => 0x51,
+            Instruction::Bit(BitRef::B2, R8::R8D) => 0x52,
+            Instruction::Bit(BitRef::B2, R8::R8E) => 0x53,
+            Instruction::Bit(BitRef::B2, R8::R8H) => 0x54,
+            Instruction::Bit(BitRef::B2, R8::R8L) => 0x55,
+            Instruction::Bit(BitRef::B2, R8::R8HLRef) => 0x56,
+            Instruction::Bit(BitRef::B2, R8::R8A) => 0x57,
+            Instruction::Bit(BitRef::B3, R8::R8B) => 0x58,
+            Instruction::Bit(BitRef::B3, R8::R8C) => 0x59,
+            Instruction::Bit(BitRef::B3, R8::R8D) => 0x5a,
+            Instruction::Bit(BitRef::B3, R8::R8E) => 0x5b,
+            Instruction::Bit(BitRef::B3, R8::R8H) => 0x5c,
+            Instruction::Bit(BitRef::B3, R8::R8L) => 0x5d,
+            Instruction::Bit(BitRef::B3, R8::R8HLRef) => 0x5e,
+            Instruction::Bit(BitRef::B3, R8::R8A) => 0x5f,
+            Instruction::Bit(BitRef::B4, R8::R8B) => 0x60,
+            Instruction::Bit(BitRef::B4, R8::R8C) => 0x61,
+            Instruction::Bit(BitRef::B4, R8::R8D) => 0x62,
+            Instruction::Bit(BitRef::B4, R8::R8E) => 0x63,
+            Instruction::Bit(BitRef::B4, R8::R8H) => 0x64,
+            Instruction::Bit(BitRef::B4, R8::R8L) => 0x65,
+            Instruction::Bit(BitRef::B4, R8::R8HLRef) => 0x66,
+            Instruction::Bit(BitRef::B4, R8::R8A) => 0x67,
+            Instruction::Bit(BitRef::B5, R8::R8B) => 0x68,
+            Instruction::Bit(BitRef::B5, R8::R8C) => 0x69,
+            Instruction::Bit(BitRef::B5, R8::R8D) => 0x6a,
+            Instruction::Bit(BitRef::B5, R8::R8E) => 0x6b,
+            Instruction::Bit(BitRef::B5, R8::R8H) => 0x6c,
+            Instruction::Bit(BitRef::B5, R8::R8L) => 0x6d,
+            Instruction::Bit(BitRef::B5, R8::R8HLRef) => 0x6e,
+            Instruction::Bit(BitRef::B5, R8::R8A) => 0x6f,
+            Instruction::Bit(BitRef::B6, R8::R8B) => 0x70,
+            Instruction::Bit(BitRef::B6, R8::R8C) => 0x71,
+            Instruction::Bit(BitRef::B6, R8::R8D) => 0x72,
+            Instruction::Bit(BitRef::B6, R8::R8E) => 0x73,
+            Instruction::Bit(BitRef::B6, R8::R8H) => 0x74,
+            Instruction::Bit(BitRef::B6, R8::R8L) => 0x75,
+            Instruction::Bit(BitRef::B6, R8::R8HLRef) => 0x76,
+            Instruction::Bit(BitRef::B6, R8::R8A) => 0x77,
+            Instruction::Bit(BitRef::B7, R8::R8B) => 0x78,
+            Instruction::Bit(BitRef::B7, R8::R8C) => 0x79,
+            Instruction::Bit(BitRef::B7, R8::R8D) => 0x7a,
+            Instruction::Bit(BitRef::B7, R8::R8E) => 0x7b,
+            Instruction::Bit(BitRef::B7, R8::R8H) => 0x7c,
+            Instruction::Bit(BitRef::B7, R8::R8L) => 0x7d,
+            Instruction::Bit(BitRef::B7, R8::R8HLRef) => 0x7e,
+            Instruction::Bit(BitRef::B7, R8::R8A) => 0x7f,
+            Instruction::Res(BitRef::B0, R8::R8B) => 0x80,
+            Instruction::Res(BitRef::B0, R8::R8C) => 0x81,
+            Instruction::Res(BitRef::B0, R8::R8D) => 0x82,
+            Instruction::Res(BitRef::B0, R8::R8E) => 0x83,
+            Instruction::Res(BitRef::B0, R8::R8H) => 0x84,
+            Instruction::Res(BitRef::B0, R8::R8L) => 0x85,
+            Instruction::Res(BitRef::B0, R8::R8HLRef) => 0x86,
+            Instruction::Res(BitRef::B0, R8::R8A) => 0x87,
+            Instruction::Res(BitRef::B1, R8::R8B) => 0x88,
+            Instruction::Res(BitRef::B1, R8::R8C) => 0x89,
+            Instruction::Res(BitRef::B1, R8::R8D) => 0x8a,
+            Instruction::Res(BitRef::B1, R8::R8E) => 0x8b,
+            Instruction::Res(BitRef::B1, R8::R8H) => 0x8c,
+            Instruction::Res(BitRef::B1, R8::R8L) => 0x8d,
+            Instruction::Res(BitRef::B1, R8::R8HLRef) => 0x8e,
+            Instruction::Res(BitRef::B1, R8::R8A) => 0x8f,
+            Instruction::Res(BitRef::B2, R8::R8B) => 0x90,
+            Instruction::Res(BitRef::B2, R8::R8C) => 0x91,
+            Instruction::Res(BitRef::B2, R8::R8D) => 0x92,
+            Instruction::Res(BitRef::B2, R8::R8E) => 0x93,
+            Instruction::Res(BitRef::B2, R8::R8H) => 0x94,
+            Instruction::Res(BitRef::B2, R8::R8L) => 0x95,
+            Instruction::Res(BitRef::B2, R8::R8HLRef) => 0x96,
+            Instruction::Res(BitRef::B2, R8::R8A) => 0x97,
+            Instruction::Res(BitRef::B3, R8::R8B) => 0x98,
+            Instruction::Res(BitRef::B3, R8::R8C) => 0x99,
+            Instruction::Res(BitRef::B3, R8::R8D) => 0x9a,
+            Instruction::Res(BitRef::B3, R8::R8E) => 0x9b,
+            Instruction::Res(BitRef::B3, R8::R8H) => 0x9c,
+            Instruction::Res(BitRef::B3, R8::R8L) => 0x9d,
+            Instruction::Res(BitRef::B3, R8::R8HLRef) => 0x9e,
+            Instruction::Res(BitRef::B3, R8::R8A) => 0x9f,
+            Instruction::Res(BitRef::B4, R8::R8B) => 0xa0,
+            Instruction::Res(BitRef::B4, R8::R8C) => 0xa1,
+            Instruction::Res(BitRef::B4, R8::R8D) => 0xa2,
+            Instruction::Res(BitRef::B4, R8::R8E) => 0xa3,
+            Instruction::Res(BitRef::B4, R8::R8H) => 0xa4,
+            Instruction::Res(BitRef::B4, R8::R8L) => 0xa5,
+            Instruction::Res(BitRef::B4, R8::R8HLRef) => 0xa6,
+            Instruction::Res(BitRef::B4, R8::R8A) => 0xa7,
+            Instruction::Res(BitRef::B5, R8::R8B) => 0xa8,
+            Instruction::Res(BitRef::B5, R8::R8C) => 0xa9,
+            Instruction::Res(BitRef::B5, R8::R8D) => 0xaa,
+            Instruction::Res(BitRef::B5, R8::R8E) => 0xab,
+            Instruction::Res(BitRef::B5, R8::R8H) => 0xac,
+            Instruction::Res(BitRef::B5, R8::R8L) => 0xad,
+            Instruction::Res(BitRef::B5, R8::R8HLRef) => 0xae,
+            Instruction::Res(BitRef::B5, R8::R8A) => 0xaf,
+            Instruction::Res(BitRef::B6, R8::R8B) => 0xb0,
+            Instruction::Res(BitRef::B6, R8::R8C) => 0xb1,
+            Instruction::Res(BitRef::B6, R8::R8D) => 0xb2,
+            Instruction::Res(BitRef::B6, R8::R8E) => 0xb3,
+            Instruction::Res(BitRef::B6, R8::R8H) => 0xb4,
+            Instruction::Res(BitRef::B6, R8::R8L) => 0xb5,
+            Instruction::Res(BitRef::B6, R8::R8HLRef) => 0xb6,
+            Instruction::Res(BitRef::B6, R8::R8A) => 0xb7,
+            Instruction::Res(BitRef::B7, R8::R8B) => 0xb8,
+            Instruction::Res(BitRef::B7, R8::R8C) => 0xb9,
+            Instruction::Res(BitRef::B7, R8::R8D) => 0xba,
+            Instruction::Res(BitRef::B7, R8::R8E) => 0xbb,
+            Instruction::Res(BitRef::B7, R8::R8H) => 0xbc,
+            Instruction::Res(BitRef::B7, R8::R8L) => 0xbd,
+            Instruction::Res(BitRef::B7, R8::R8HLRef) => 0xbe,
+            Instruction::Res(BitRef::B7, R8::R8A) => 0xbf,
+            Instruction::Set(BitRef::B0, R8::R8B) => 0xc0,
+            Instruction::Set(BitRef::B0, R8::R8C) => 0xc1,
+            Instruction::Set(BitRef::B0, R8::R8D) => 0xc2,
+            Instruction::Set(BitRef::B0, R8::R8E) => 0xc3,
+            Instruction::Set(BitRef::B0, R8::R8H) => 0xc4,
+            Instruction::Set(BitRef::B0, R8::R8L) => 0xc5,
+            Instruction::Set(BitRef::B0, R8::R8HLRef) => 0xc6,
+            Instruction::Set(BitRef::B0, R8::R8A) => 0xc7,
+            Instruction::Set(BitRef::B1, R8::R8B) => 0xc8,
+            Instruction::Set(BitRef::B1, R8::R8C) => 0xc9,
+            Instruction::Set(BitRef::B1, R8::R8D) => 0xca,
+            Instruction::Set(BitRef::B1, R8::R8E) => 0xcb,
+            Instruction::Set(BitRef::B1, R8::R8H) => 0xcc,
+            Instruction::Set(BitRef::B1, R8::R8L) => 0xcd,
+            Instruction::Set(BitRef::B1, R8::R8HLRef) => 0xce,
+            Instruction::Set(BitRef::B1, R8::R8A) => 0xcf,
+            Instruction::Set(BitRef::B2, R8::R8B) => 0xd0,
+            Instruction::Set(BitRef::B2, R8::R8C) => 0xd1,
+            Instruction::Set(BitRef::B2, R8::R8D) => 0xd2,
+            Instruction::Set(BitRef::B2, R8::R8E) => 0xd3,
+            Instruction::Set(BitRef::B2, R8::R8H) => 0xd4,
+            Instruction::Set(BitRef::B2, R8::R8L) => 0xd5,
+            Instruction::Set(BitRef::B2, R8::R8HLRef) => 0xd6,
+            Instruction::Set(BitRef::B2, R8::R8A) => 0xd7,
+            Instruction::Set(BitRef::B3, R8::R8B) => 0xd8,
+            Instruction::Set(BitRef::B3, R8::R8C) => 0xd9,
+            Instruction::Set(BitRef::B3, R8::R8D) => 0xda,
+            Instruction::Set(BitRef::B3, R8::R8E) => 0xdb,
+            Instruction::Set(BitRef::B3, R8::R8H) => 0xdc,
+            Instruction::Set(BitRef::B3, R8::R8L) => 0xdd,
+            Instruction::Set(BitRef::B3, R8::R8HLRef) => 0xde,
+            Instruction::Set(BitRef::B3, R8::R8A) => 0xdf,
+            Instruction::Set(BitRef::B4, R8::R8B) => 0xe0,
+            Instruction::Set(BitRef::B4, R8::R8C) => 0xe1,
+            Instruction::Set(BitRef::B4, R8::R8D) => 0xe2,
+            Instruction::Set(BitRef::B4, R8::R8E) => 0xe3,
+            Instruction::Set(BitRef::B4, R8::R8H) => 0xe4,
+            Instruction::Set(BitRef::B4, R8::R8L) => 0xe5,
+            Instruction::Set(BitRef::B4, R8::R8HLRef) => 0xe6,
+            Instruction::Set(BitRef::B4, R8::R8A) => 0xe7,
+            Instruction::Set(BitRef::B5, R8::R8B) => 0xe8,
+            Instruction::Set(BitRef::B5, R8::R8C) => 0xe9,
+            Instruction::Set(BitRef::B5, R8::R8D) => 0xea,
+            Instruction::Set(BitRef::B5, R8::R8E) => 0xeb,
+            Instruction::Set(BitRef::B5, R8::R8H) => 0xec,
+            Instruction::Set(BitRef::B5, R8::R8L) => 0xed,
+            Instruction::Set(BitRef::B5, R8::R8HLRef) => 0xee,
+            Instruction::Set(BitRef::B5, R8::R8A) => 0xef,
+            Instruction::Set(BitRef::B6, R8::R8B) => 0xf0,
+            Instruction::Set(BitRef::B6, R8::R8C) => 0xf1,
+            Instruction::Set(BitRef::B6, R8::R8D) => 0xf2,
+            Instruction::Set(BitRef::B6, R8::R8E) => 0xf3,
+            Instruction::Set(BitRef::B6, R8::R8H) => 0xf4,
+            Instruction::Set(BitRef::B6, R8::R8L) => 0xf5,
+            Instruction::Set(BitRef::B6, R8::R8HLRef) => 0xf6,
+            Instruction::Set(BitRef::B6, R8::R8A) => 0xf7,
+            Instruction::Set(BitRef::B7, R8::R8B) => 0xf8,
+            Instruction::Set(BitRef::B7, R8::R8C) => 0xf9,
+            Instruction::Set(BitRef::B7, R8::R8D) => 0xfa,
+            Instruction::Set(BitRef::B7, R8::R8E) => 0xfb,
+            Instruction::Set(BitRef::B7, R8::R8H) => 0xfc,
+            Instruction::Set(BitRef::B7, R8::R8L) => 0xfd,
+            Instruction::Set(BitRef::B7, R8::R8HLRef) => 0xfe,
+            Instruction::Set(BitRef::B7, R8::R8A) => 0xff,
+            Instruction::LoadR8R8(R8::R8HLRef, R8::R8HLRef) => unreachable!(),
+        }
+    }
+
     pub fn from_u8_slice(
         buf: &[u8],
         addr: u16,
-        min_size: usize,
+        _unused: usize,
     ) -> Result<(Instruction, u8), InstructionError> {
-        if addr as usize + min_size > buf.len() {
-            return Err(InstructionError::Incomplete(buf[addr as usize..].to_vec()).into());
+        let size = OPCODE_SIZE_LOOKUP[buf[0] as usize];
+        let insn = buf[0];
+        if size == 0 {
+            return Err(InstructionError::Illegal(buf[0]).into());
         }
-
-        let byte = buf[addr as usize];
-        if ILLEGAL_INSTRUCTIONS.contains(&byte) {
-            return Err(InstructionError::Illegal(byte).into());
-        }
-        let quad = byte >> 6;
-        let result = match quad & 0b11 {
-            // load quadrant
-            0b00 => match byte & 0x0F {
-                0x0 if byte == 0x0 => Instruction::Nop,
-                0x0 if byte == 0x10 => Instruction::StopN8(Self::read_u8_helper(buf, addr + 1)), // STOP
-                0x1 => Instruction::LoadR16N16(
-                    R16::from_operand(byte >> 4 & 0xf),
-                    Self::read_u16_helper(buf, addr + 1),
-                ),
-                0x2 => Instruction::StoreAR16Mem(R16Mem::from_operand(byte >> 4 & 0xf)),
-                0x3 => Instruction::IncR16(R16::from_operand(byte >> 4 & 0x3)),
-                0x8 if byte == 0x8 => Instruction::StoreSPA16(Self::read_u16_helper(buf, addr + 1)),
-                0xa => Instruction::LoadAR16Mem(R16Mem::from_operand(byte >> 4 & 0xf)),
-                0xb => Instruction::DecR16(R16::from_operand(byte >> 4 & 0x3)),
-                0x9 => Instruction::AddHLR16(R16::from_operand(byte >> 4 & 0x3)),
-                0x7 | 0xf => match byte >> 3 {
-                    0x0 => Instruction::RlcA,
-                    0x1 => Instruction::RrcA,
-                    0x2 => Instruction::RlA,
-                    0x3 => Instruction::RrA,
-                    0x4 => Instruction::Daa,
-                    0x5 => Instruction::Cpl,
-                    0x6 => Instruction::Scf,
-                    0x7 => Instruction::Ccf,
-                    _ => return Err(InstructionError::Unknown(byte).into()),
-                },
-                _ => match byte & 0x7 {
-                    0x0 => {
-                        if byte & 0b0010_0000 == 0 {
-                            Instruction::JumpNear(Self::read_u8_helper(buf, addr + 1) as i8)
-                        } else {
-                            Instruction::JumpNearCond(
-                                Cond::from_operand((byte >> 3) & 0x3),
-                                Self::read_u8_helper(buf, addr + 1) as i8,
-                            )
-                        }
-                    }
-                    0x4 => Instruction::IncR8(R8::from_operand(byte >> 3 & 0x7)),
-                    0x5 => Instruction::DecR8(R8::from_operand(byte >> 3 & 0x7)),
-                    0x6 => Instruction::LoadR8N8(
-                        R8::from_operand(byte >> 3),
-                        Self::read_u8_helper(buf, addr + 1),
-                    ),
-                    _ => return Err(InstructionError::Unknown(byte).into()),
-                },
-            },
-            0b01 => match byte {
-                0x76 => Instruction::Halt,
-                _ => {
-                    let target_operand = R8::from_operand((byte >> 3) & 0b111);
-                    let source_operand = R8::from_operand(byte & 0b111);
-                    Instruction::LoadR8R8(target_operand, source_operand)
-                }
-            },
-            0b10 => {
-                let source_operand = R8::from_operand(byte & 0x7);
-                match byte >> 3 {
-                    0x10 => Instruction::AddR8(source_operand),
-                    0x11 => Instruction::AdcR8(source_operand),
-                    0x12 => Instruction::SubR8(source_operand),
-                    0x13 => Instruction::SbcR8(source_operand),
-                    0x14 => Instruction::AndR8(source_operand),
-                    0x15 => Instruction::XorR8(source_operand),
-                    0x16 => Instruction::OrR8(source_operand),
-                    0x17 => Instruction::CpR8(source_operand),
-                    _ => return Err(InstructionError::Unknown(byte).into()),
-                }
+        let insn = match insn {
+            0x0 => Instruction::Nop,
+            0x1 => Instruction::LoadR16N16(R16::R16BC, Self::read_u16_helper(buf, addr + 1)),
+            0x2 => Instruction::StoreAR16Mem(R16Mem::R16MemBC),
+            0x3 => Instruction::IncR16(R16::R16BC),
+            0x4 => Instruction::IncR8(R8::R8B),
+            0x5 => Instruction::DecR8(R8::R8B),
+            0x6 => Instruction::LoadR8N8(R8::R8B, Self::read_u8_helper(buf, addr + 1)),
+            0x7 => Instruction::RlcA,
+            0x8 => Instruction::StoreSPA16(Self::read_u16_helper(buf, addr + 1)),
+            0x9 => Instruction::AddHLR16(R16::R16BC),
+            0xa => Instruction::LoadAR16Mem(R16Mem::R16MemBC),
+            0xb => Instruction::DecR16(R16::R16BC),
+            0xc => Instruction::IncR8(R8::R8C),
+            0xd => Instruction::DecR8(R8::R8C),
+            0xe => Instruction::LoadR8N8(R8::R8C, Self::read_u8_helper(buf, addr + 1)),
+            0xf => Instruction::RrcA,
+            0x10 => Instruction::StopN8(Self::read_u8_helper(buf, addr + 1)),
+            0x11 => Instruction::LoadR16N16(R16::R16DE, Self::read_u16_helper(buf, addr + 1)),
+            0x12 => Instruction::StoreAR16Mem(R16Mem::R16MemDE),
+            0x13 => Instruction::IncR16(R16::R16DE),
+            0x14 => Instruction::IncR8(R8::R8D),
+            0x15 => Instruction::DecR8(R8::R8D),
+            0x16 => Instruction::LoadR8N8(R8::R8D, Self::read_u8_helper(buf, addr + 1)),
+            0x17 => Instruction::RlA,
+            0x18 => Instruction::JumpNear(Self::read_u8_helper(buf, addr + 1) as i8),
+            0x19 => Instruction::AddHLR16(R16::R16DE),
+            0x1a => Instruction::LoadAR16Mem(R16Mem::R16MemDE),
+            0x1b => Instruction::DecR16(R16::R16DE),
+            0x1c => Instruction::IncR8(R8::R8E),
+            0x1d => Instruction::DecR8(R8::R8E),
+            0x1e => Instruction::LoadR8N8(R8::R8E, Self::read_u8_helper(buf, addr + 1)),
+            0x1f => Instruction::RrA,
+            0x20 => {
+                Instruction::JumpNearCond(Cond::CondNZ, Self::read_u8_helper(buf, addr + 1) as i8)
             }
-            0b11 => match byte {
-                0xe0 => Instruction::StoreAA8H(Self::read_u8_helper(buf, addr + 1)),
-                0xe2 => Instruction::StoreACH,
-                0xea => Instruction::StoreAA16(Self::read_u16_helper(buf, addr + 1)),
-                0xf0 => Instruction::LoadAA8H(Self::read_u8_helper(buf, addr + 1)),
-                0xf2 => Instruction::LoadACH,
-                0xfa => Instruction::LoadAA16(Self::read_u16_helper(buf, addr + 1)),
-                0xcb => {
-                    let byte = buf[addr as usize + 1];
-                    match byte >> 6 {
-                        0b00 => {
-                            let op = R8::from_operand(byte & 0x7);
-                            match byte >> 3 & 0x7 {
-                                0x0 => Instruction::Rlc(op),
-                                0x1 => Instruction::Rrc(op),
-                                0x2 => Instruction::Rl(op),
-                                0x3 => Instruction::Rr(op),
-                                0x4 => Instruction::Sla(op),
-                                0x5 => Instruction::Sra(op),
-                                0x6 => Instruction::Swap(op),
-                                0x7 => Instruction::Srl(op),
-                                _ => return Err(InstructionError::Unknown(byte).into()),
-                            }
-                        }
-                        0b01 => Instruction::Bit(
-                            BitRef::decode((byte >> 3) & 0x7),
-                            R8::from_operand(byte & 0x7),
-                        ),
-                        0b10 => Instruction::Res(
-                            BitRef::decode((byte >> 3) & 0x7),
-                            R8::from_operand(byte & 0x7),
-                        ),
-                        0b11 => Instruction::Set(
-                            BitRef::decode((byte >> 3) & 0x7),
-                            R8::from_operand(byte & 0x7),
-                        ),
-                        _ => return Err(InstructionError::Unknown(byte).into()),
-                    }
-                }
-                0xcd => Instruction::CallA16(Self::read_u16_helper(buf, addr + 1)),
-                0xc4 | 0xCC | 0xd4 | 0xdc => Instruction::CallCondA16(
-                    Cond::from_operand(byte >> 3 & 0x3),
-                    Self::read_u16_helper(buf, addr + 1),
-                ),
-
-                0xc6 => Instruction::AddAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xce => Instruction::AdcAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xd6 => Instruction::SubAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xde => Instruction::SbcAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xe6 => Instruction::AndAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xee => Instruction::XorAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xf6 => Instruction::OrAN8(Self::read_u8_helper(buf, addr + 1)),
-                0xfe => Instruction::CpAN8(Self::read_u8_helper(buf, addr + 1)),
-
-                0xF3 => Instruction::Di,
-                0xFb => Instruction::Ei,
-                0xd9 => Instruction::Reti,
-
-                0xe8 => Instruction::AddSPN8(Self::read_u8_helper(buf, addr + 1)),
-                0xe9 => Instruction::JumpFarHL, // jp [hl]
-                0xf8 => Instruction::LoadHLSPN8(Self::read_u8_helper(buf, addr + 1)),
-                0xf9 => Instruction::LoadHLSP, // ld sp, hl
-
-                0xc7 => Instruction::Rst(Tgt3::T0),
-                0xcf => Instruction::Rst(Tgt3::T1),
-                0xd7 => Instruction::Rst(Tgt3::T2),
-                0xdf => Instruction::Rst(Tgt3::T3),
-                0xe7 => Instruction::Rst(Tgt3::T4),
-                0xef => Instruction::Rst(Tgt3::T5),
-                0xf7 => Instruction::Rst(Tgt3::T6),
-                0xff => Instruction::Rst(Tgt3::T7),
-
-                0xc5 => Instruction::PushR16Stack(R16Stack::BC),
-                0xd5 => Instruction::PushR16Stack(R16Stack::DE),
-                0xe5 => Instruction::PushR16Stack(R16Stack::HL),
-                0xf5 => Instruction::PushR16Stack(R16Stack::AF),
-                0xc1 => Instruction::PopR16Stack(R16Stack::BC),
-                0xd1 => Instruction::PopR16Stack(R16Stack::DE),
-                0xe1 => Instruction::PopR16Stack(R16Stack::HL),
-                0xf1 => Instruction::PopR16Stack(R16Stack::AF),
-                0xc0 => Instruction::RetCond(Cond::NZ),
-                0xc8 => Instruction::RetCond(Cond::Z),
-                0xc9 => Instruction::Ret,
-                0xd0 => Instruction::RetCond(Cond::NC),
-                0xd8 => Instruction::RetCond(Cond::C),
-                0xC2 => Instruction::JumpFarCond(Cond::NZ, Self::read_u16_helper(buf, addr + 1)),
-                0xCA => Instruction::JumpFarCond(Cond::Z, Self::read_u16_helper(buf, addr + 1)),
-                0xD2 => Instruction::JumpFarCond(Cond::NC, Self::read_u16_helper(buf, addr + 1)),
-                0xDA => Instruction::JumpFarCond(Cond::C, Self::read_u16_helper(buf, addr + 1)),
-                0xC3 => Instruction::JumpFar(Self::read_u16_helper(buf, addr + 1)),
-
-                _ => return Err(InstructionError::Unknown(byte).into()),
+            0x21 => Instruction::LoadR16N16(R16::R16HL, Self::read_u16_helper(buf, addr + 1)),
+            0x22 => Instruction::StoreAR16Mem(R16Mem::R16MemHLInc),
+            0x23 => Instruction::IncR16(R16::R16HL),
+            0x24 => Instruction::IncR8(R8::R8H),
+            0x25 => Instruction::DecR8(R8::R8H),
+            0x26 => Instruction::LoadR8N8(R8::R8H, Self::read_u8_helper(buf, addr + 1)),
+            0x27 => Instruction::Daa,
+            0x28 => {
+                Instruction::JumpNearCond(Cond::CondZ, Self::read_u8_helper(buf, addr + 1) as i8)
+            }
+            0x29 => Instruction::AddHLR16(R16::R16HL),
+            0x2a => Instruction::LoadAR16Mem(R16Mem::R16MemHLInc),
+            0x2b => Instruction::DecR16(R16::R16HL),
+            0x2c => Instruction::IncR8(R8::R8L),
+            0x2d => Instruction::DecR8(R8::R8L),
+            0x2e => Instruction::LoadR8N8(R8::R8L, Self::read_u8_helper(buf, addr + 1)),
+            0x2f => Instruction::Cpl,
+            0x30 => {
+                Instruction::JumpNearCond(Cond::CondNC, Self::read_u8_helper(buf, addr + 1) as i8)
+            }
+            0x31 => Instruction::LoadR16N16(R16::R16Sp, Self::read_u16_helper(buf, addr + 1)),
+            0x32 => Instruction::StoreAR16Mem(R16Mem::R16MemHLDec),
+            0x33 => Instruction::IncR16(R16::R16Sp),
+            0x34 => Instruction::IncR8(R8::R8HLRef),
+            0x35 => Instruction::DecR8(R8::R8HLRef),
+            0x36 => Instruction::LoadR8N8(R8::R8HLRef, Self::read_u8_helper(buf, addr + 1)),
+            0x37 => Instruction::Scf,
+            0x38 => {
+                Instruction::JumpNearCond(Cond::CondC, Self::read_u8_helper(buf, addr + 1) as i8)
+            }
+            0x39 => Instruction::AddHLR16(R16::R16Sp),
+            0x3a => Instruction::LoadAR16Mem(R16Mem::R16MemHLDec),
+            0x3b => Instruction::DecR16(R16::R16Sp),
+            0x3c => Instruction::IncR8(R8::R8A),
+            0x3d => Instruction::DecR8(R8::R8A),
+            0x3e => Instruction::LoadR8N8(R8::R8A, Self::read_u8_helper(buf, addr + 1)),
+            0x3f => Instruction::Ccf,
+            0x40 => Instruction::LoadR8R8(R8::R8B, R8::R8B),
+            0x41 => Instruction::LoadR8R8(R8::R8B, R8::R8C),
+            0x42 => Instruction::LoadR8R8(R8::R8B, R8::R8D),
+            0x43 => Instruction::LoadR8R8(R8::R8B, R8::R8E),
+            0x44 => Instruction::LoadR8R8(R8::R8B, R8::R8H),
+            0x45 => Instruction::LoadR8R8(R8::R8B, R8::R8L),
+            0x46 => Instruction::LoadR8R8(R8::R8B, R8::R8HLRef),
+            0x47 => Instruction::LoadR8R8(R8::R8B, R8::R8A),
+            0x48 => Instruction::LoadR8R8(R8::R8C, R8::R8B),
+            0x49 => Instruction::LoadR8R8(R8::R8C, R8::R8C),
+            0x4a => Instruction::LoadR8R8(R8::R8C, R8::R8D),
+            0x4b => Instruction::LoadR8R8(R8::R8C, R8::R8E),
+            0x4c => Instruction::LoadR8R8(R8::R8C, R8::R8H),
+            0x4d => Instruction::LoadR8R8(R8::R8C, R8::R8L),
+            0x4e => Instruction::LoadR8R8(R8::R8C, R8::R8HLRef),
+            0x4f => Instruction::LoadR8R8(R8::R8C, R8::R8A),
+            0x50 => Instruction::LoadR8R8(R8::R8D, R8::R8B),
+            0x51 => Instruction::LoadR8R8(R8::R8D, R8::R8C),
+            0x52 => Instruction::LoadR8R8(R8::R8D, R8::R8D),
+            0x53 => Instruction::LoadR8R8(R8::R8D, R8::R8E),
+            0x54 => Instruction::LoadR8R8(R8::R8D, R8::R8H),
+            0x55 => Instruction::LoadR8R8(R8::R8D, R8::R8L),
+            0x56 => Instruction::LoadR8R8(R8::R8D, R8::R8HLRef),
+            0x57 => Instruction::LoadR8R8(R8::R8D, R8::R8A),
+            0x58 => Instruction::LoadR8R8(R8::R8E, R8::R8B),
+            0x59 => Instruction::LoadR8R8(R8::R8E, R8::R8C),
+            0x5a => Instruction::LoadR8R8(R8::R8E, R8::R8D),
+            0x5b => Instruction::LoadR8R8(R8::R8E, R8::R8E),
+            0x5c => Instruction::LoadR8R8(R8::R8E, R8::R8H),
+            0x5d => Instruction::LoadR8R8(R8::R8E, R8::R8L),
+            0x5e => Instruction::LoadR8R8(R8::R8E, R8::R8HLRef),
+            0x5f => Instruction::LoadR8R8(R8::R8E, R8::R8A),
+            0x60 => Instruction::LoadR8R8(R8::R8H, R8::R8B),
+            0x61 => Instruction::LoadR8R8(R8::R8H, R8::R8C),
+            0x62 => Instruction::LoadR8R8(R8::R8H, R8::R8D),
+            0x63 => Instruction::LoadR8R8(R8::R8H, R8::R8E),
+            0x64 => Instruction::LoadR8R8(R8::R8H, R8::R8H),
+            0x65 => Instruction::LoadR8R8(R8::R8H, R8::R8L),
+            0x66 => Instruction::LoadR8R8(R8::R8H, R8::R8HLRef),
+            0x67 => Instruction::LoadR8R8(R8::R8H, R8::R8A),
+            0x68 => Instruction::LoadR8R8(R8::R8L, R8::R8B),
+            0x69 => Instruction::LoadR8R8(R8::R8L, R8::R8C),
+            0x6a => Instruction::LoadR8R8(R8::R8L, R8::R8D),
+            0x6b => Instruction::LoadR8R8(R8::R8L, R8::R8E),
+            0x6c => Instruction::LoadR8R8(R8::R8L, R8::R8H),
+            0x6d => Instruction::LoadR8R8(R8::R8L, R8::R8L),
+            0x6e => Instruction::LoadR8R8(R8::R8L, R8::R8HLRef),
+            0x6f => Instruction::LoadR8R8(R8::R8L, R8::R8A),
+            0x70 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8B),
+            0x71 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8C),
+            0x72 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8D),
+            0x73 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8E),
+            0x74 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8H),
+            0x75 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8L),
+            0x76 => Instruction::Halt,
+            0x77 => Instruction::LoadR8R8(R8::R8HLRef, R8::R8A),
+            0x78 => Instruction::LoadR8R8(R8::R8A, R8::R8B),
+            0x79 => Instruction::LoadR8R8(R8::R8A, R8::R8C),
+            0x7a => Instruction::LoadR8R8(R8::R8A, R8::R8D),
+            0x7b => Instruction::LoadR8R8(R8::R8A, R8::R8E),
+            0x7c => Instruction::LoadR8R8(R8::R8A, R8::R8H),
+            0x7d => Instruction::LoadR8R8(R8::R8A, R8::R8L),
+            0x7e => Instruction::LoadR8R8(R8::R8A, R8::R8HLRef),
+            0x7f => Instruction::LoadR8R8(R8::R8A, R8::R8A),
+            0x80 => Instruction::AddR8(R8::R8B),
+            0x81 => Instruction::AddR8(R8::R8C),
+            0x82 => Instruction::AddR8(R8::R8D),
+            0x83 => Instruction::AddR8(R8::R8E),
+            0x84 => Instruction::AddR8(R8::R8H),
+            0x85 => Instruction::AddR8(R8::R8L),
+            0x86 => Instruction::AddR8(R8::R8HLRef),
+            0x87 => Instruction::AddR8(R8::R8A),
+            0x88 => Instruction::AdcR8(R8::R8B),
+            0x89 => Instruction::AdcR8(R8::R8C),
+            0x8a => Instruction::AdcR8(R8::R8D),
+            0x8b => Instruction::AdcR8(R8::R8E),
+            0x8c => Instruction::AdcR8(R8::R8H),
+            0x8d => Instruction::AdcR8(R8::R8L),
+            0x8e => Instruction::AdcR8(R8::R8HLRef),
+            0x8f => Instruction::AdcR8(R8::R8A),
+            0x90 => Instruction::SubR8(R8::R8B),
+            0x91 => Instruction::SubR8(R8::R8C),
+            0x92 => Instruction::SubR8(R8::R8D),
+            0x93 => Instruction::SubR8(R8::R8E),
+            0x94 => Instruction::SubR8(R8::R8H),
+            0x95 => Instruction::SubR8(R8::R8L),
+            0x96 => Instruction::SubR8(R8::R8HLRef),
+            0x97 => Instruction::SubR8(R8::R8A),
+            0x98 => Instruction::SbcR8(R8::R8B),
+            0x99 => Instruction::SbcR8(R8::R8C),
+            0x9a => Instruction::SbcR8(R8::R8D),
+            0x9b => Instruction::SbcR8(R8::R8E),
+            0x9c => Instruction::SbcR8(R8::R8H),
+            0x9d => Instruction::SbcR8(R8::R8L),
+            0x9e => Instruction::SbcR8(R8::R8HLRef),
+            0x9f => Instruction::SbcR8(R8::R8A),
+            0xa0 => Instruction::AndR8(R8::R8B),
+            0xa1 => Instruction::AndR8(R8::R8C),
+            0xa2 => Instruction::AndR8(R8::R8D),
+            0xa3 => Instruction::AndR8(R8::R8E),
+            0xa4 => Instruction::AndR8(R8::R8H),
+            0xa5 => Instruction::AndR8(R8::R8L),
+            0xa6 => Instruction::AndR8(R8::R8HLRef),
+            0xa7 => Instruction::AndR8(R8::R8A),
+            0xa8 => Instruction::XorR8(R8::R8B),
+            0xa9 => Instruction::XorR8(R8::R8C),
+            0xaa => Instruction::XorR8(R8::R8D),
+            0xab => Instruction::XorR8(R8::R8E),
+            0xac => Instruction::XorR8(R8::R8H),
+            0xad => Instruction::XorR8(R8::R8L),
+            0xae => Instruction::XorR8(R8::R8HLRef),
+            0xaf => Instruction::XorR8(R8::R8A),
+            0xb0 => Instruction::OrR8(R8::R8B),
+            0xb1 => Instruction::OrR8(R8::R8C),
+            0xb2 => Instruction::OrR8(R8::R8D),
+            0xb3 => Instruction::OrR8(R8::R8E),
+            0xb4 => Instruction::OrR8(R8::R8H),
+            0xb5 => Instruction::OrR8(R8::R8L),
+            0xb6 => Instruction::OrR8(R8::R8HLRef),
+            0xb7 => Instruction::OrR8(R8::R8A),
+            0xb8 => Instruction::CpR8(R8::R8B),
+            0xb9 => Instruction::CpR8(R8::R8C),
+            0xba => Instruction::CpR8(R8::R8D),
+            0xbb => Instruction::CpR8(R8::R8E),
+            0xbc => Instruction::CpR8(R8::R8H),
+            0xbd => Instruction::CpR8(R8::R8L),
+            0xbe => Instruction::CpR8(R8::R8HLRef),
+            0xbf => Instruction::CpR8(R8::R8A),
+            0xc0 => Instruction::RetCond(Cond::CondNZ),
+            0xc1 => Instruction::PopR16Stack(R16Stack::R16StackBC),
+            0xc2 => Instruction::JumpFarCond(Cond::CondNZ, Self::read_u16_helper(buf, addr + 1)),
+            0xc3 => Instruction::JumpFar(Self::read_u16_helper(buf, addr + 1)),
+            0xc4 => Instruction::CallCondA16(Cond::CondNZ, Self::read_u16_helper(buf, addr + 1)),
+            0xc5 => Instruction::PushR16Stack(R16Stack::R16StackBC),
+            0xc6 => Instruction::AddAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xc7 => Instruction::Rst(Tgt3::T0),
+            0xc8 => Instruction::RetCond(Cond::CondZ),
+            0xc9 => Instruction::Ret,
+            0xca => Instruction::JumpFarCond(Cond::CondZ, Self::read_u16_helper(buf, addr + 1)),
+            0xcc => Instruction::CallCondA16(Cond::CondZ, Self::read_u16_helper(buf, addr + 1)),
+            0xcd => Instruction::CallA16(Self::read_u16_helper(buf, addr + 1)),
+            0xce => Instruction::AdcAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xcf => Instruction::Rst(Tgt3::T1),
+            0xd0 => Instruction::RetCond(Cond::CondNC),
+            0xd1 => Instruction::PopR16Stack(R16Stack::R16StackDE),
+            0xd2 => Instruction::JumpFarCond(Cond::CondNC, Self::read_u16_helper(buf, addr + 1)),
+            0xd4 => Instruction::CallCondA16(Cond::CondNC, Self::read_u16_helper(buf, addr + 1)),
+            0xd5 => Instruction::PushR16Stack(R16Stack::R16StackDE),
+            0xd6 => Instruction::SubAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xd7 => Instruction::Rst(Tgt3::T2),
+            0xd8 => Instruction::RetCond(Cond::CondC),
+            0xd9 => Instruction::Reti,
+            0xda => Instruction::JumpFarCond(Cond::CondC, Self::read_u16_helper(buf, addr + 1)),
+            0xdc => Instruction::CallCondA16(Cond::CondC, Self::read_u16_helper(buf, addr + 1)),
+            0xde => Instruction::SbcAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xdf => Instruction::Rst(Tgt3::T3),
+            0xe0 => Instruction::StoreAA8H(Self::read_u8_helper(buf, addr + 1)),
+            0xe1 => Instruction::PopR16Stack(R16Stack::R16StackHL),
+            0xe2 => Instruction::StoreACH,
+            0xe5 => Instruction::PushR16Stack(R16Stack::R16StackHL),
+            0xe6 => Instruction::AndAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xe7 => Instruction::Rst(Tgt3::T4),
+            0xe8 => Instruction::AddSPN8(Self::read_u8_helper(buf, addr + 1)),
+            0xe9 => Instruction::JumpFarHL,
+            0xea => Instruction::StoreAA16(Self::read_u16_helper(buf, addr + 1)),
+            0xee => Instruction::XorAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xef => Instruction::Rst(Tgt3::T5),
+            0xf0 => Instruction::LoadAA8H(Self::read_u8_helper(buf, addr + 1)),
+            0xf1 => Instruction::PopR16Stack(R16Stack::R16StackAF),
+            0xf2 => Instruction::LoadACH,
+            0xf3 => Instruction::Di,
+            0xf5 => Instruction::PushR16Stack(R16Stack::R16StackAF),
+            0xf6 => Instruction::OrAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xf7 => Instruction::Rst(Tgt3::T6),
+            0xf8 => Instruction::LoadHLSPN8(Self::read_u8_helper(buf, addr + 1)),
+            0xf9 => Instruction::LoadHLSP,
+            0xfa => Instruction::LoadAA16(Self::read_u16_helper(buf, addr + 1)),
+            0xfb => Instruction::Ei,
+            0xfe => Instruction::CpAN8(Self::read_u8_helper(buf, addr + 1)),
+            0xff => Instruction::Rst(Tgt3::T7),
+            0xcb => match buf[1] {
+                0x00 => Instruction::Rlc(R8::R8B),
+                0x01 => Instruction::Rlc(R8::R8C),
+                0x02 => Instruction::Rlc(R8::R8D),
+                0x03 => Instruction::Rlc(R8::R8E),
+                0x04 => Instruction::Rlc(R8::R8H),
+                0x05 => Instruction::Rlc(R8::R8L),
+                0x06 => Instruction::Rlc(R8::R8HLRef),
+                0x07 => Instruction::Rlc(R8::R8A),
+                0x08 => Instruction::Rrc(R8::R8B),
+                0x09 => Instruction::Rrc(R8::R8C),
+                0x0a => Instruction::Rrc(R8::R8D),
+                0x0b => Instruction::Rrc(R8::R8E),
+                0x0c => Instruction::Rrc(R8::R8H),
+                0x0d => Instruction::Rrc(R8::R8L),
+                0x0e => Instruction::Rrc(R8::R8HLRef),
+                0x0f => Instruction::Rrc(R8::R8A),
+                0x10 => Instruction::Rl(R8::R8B),
+                0x11 => Instruction::Rl(R8::R8C),
+                0x12 => Instruction::Rl(R8::R8D),
+                0x13 => Instruction::Rl(R8::R8E),
+                0x14 => Instruction::Rl(R8::R8H),
+                0x15 => Instruction::Rl(R8::R8L),
+                0x16 => Instruction::Rl(R8::R8HLRef),
+                0x17 => Instruction::Rl(R8::R8A),
+                0x18 => Instruction::Rr(R8::R8B),
+                0x19 => Instruction::Rr(R8::R8C),
+                0x1a => Instruction::Rr(R8::R8D),
+                0x1b => Instruction::Rr(R8::R8E),
+                0x1c => Instruction::Rr(R8::R8H),
+                0x1d => Instruction::Rr(R8::R8L),
+                0x1e => Instruction::Rr(R8::R8HLRef),
+                0x1f => Instruction::Rr(R8::R8A),
+                0x20 => Instruction::Sla(R8::R8B),
+                0x21 => Instruction::Sla(R8::R8C),
+                0x22 => Instruction::Sla(R8::R8D),
+                0x23 => Instruction::Sla(R8::R8E),
+                0x24 => Instruction::Sla(R8::R8H),
+                0x25 => Instruction::Sla(R8::R8L),
+                0x26 => Instruction::Sla(R8::R8HLRef),
+                0x27 => Instruction::Sla(R8::R8A),
+                0x28 => Instruction::Sra(R8::R8B),
+                0x29 => Instruction::Sra(R8::R8C),
+                0x2a => Instruction::Sra(R8::R8D),
+                0x2b => Instruction::Sra(R8::R8E),
+                0x2c => Instruction::Sra(R8::R8H),
+                0x2d => Instruction::Sra(R8::R8L),
+                0x2e => Instruction::Sra(R8::R8HLRef),
+                0x2f => Instruction::Sra(R8::R8A),
+                0x30 => Instruction::Swap(R8::R8B),
+                0x31 => Instruction::Swap(R8::R8C),
+                0x32 => Instruction::Swap(R8::R8D),
+                0x33 => Instruction::Swap(R8::R8E),
+                0x34 => Instruction::Swap(R8::R8H),
+                0x35 => Instruction::Swap(R8::R8L),
+                0x36 => Instruction::Swap(R8::R8HLRef),
+                0x37 => Instruction::Swap(R8::R8A),
+                0x38 => Instruction::Srl(R8::R8B),
+                0x39 => Instruction::Srl(R8::R8C),
+                0x3a => Instruction::Srl(R8::R8D),
+                0x3b => Instruction::Srl(R8::R8E),
+                0x3c => Instruction::Srl(R8::R8H),
+                0x3d => Instruction::Srl(R8::R8L),
+                0x3e => Instruction::Srl(R8::R8HLRef),
+                0x3f => Instruction::Srl(R8::R8A),
+                0x40 => Instruction::Bit(BitRef::B0, R8::R8B),
+                0x41 => Instruction::Bit(BitRef::B0, R8::R8C),
+                0x42 => Instruction::Bit(BitRef::B0, R8::R8D),
+                0x43 => Instruction::Bit(BitRef::B0, R8::R8E),
+                0x44 => Instruction::Bit(BitRef::B0, R8::R8H),
+                0x45 => Instruction::Bit(BitRef::B0, R8::R8L),
+                0x46 => Instruction::Bit(BitRef::B0, R8::R8HLRef),
+                0x47 => Instruction::Bit(BitRef::B0, R8::R8A),
+                0x48 => Instruction::Bit(BitRef::B1, R8::R8B),
+                0x49 => Instruction::Bit(BitRef::B1, R8::R8C),
+                0x4a => Instruction::Bit(BitRef::B1, R8::R8D),
+                0x4b => Instruction::Bit(BitRef::B1, R8::R8E),
+                0x4c => Instruction::Bit(BitRef::B1, R8::R8H),
+                0x4d => Instruction::Bit(BitRef::B1, R8::R8L),
+                0x4e => Instruction::Bit(BitRef::B1, R8::R8HLRef),
+                0x4f => Instruction::Bit(BitRef::B1, R8::R8A),
+                0x50 => Instruction::Bit(BitRef::B2, R8::R8B),
+                0x51 => Instruction::Bit(BitRef::B2, R8::R8C),
+                0x52 => Instruction::Bit(BitRef::B2, R8::R8D),
+                0x53 => Instruction::Bit(BitRef::B2, R8::R8E),
+                0x54 => Instruction::Bit(BitRef::B2, R8::R8H),
+                0x55 => Instruction::Bit(BitRef::B2, R8::R8L),
+                0x56 => Instruction::Bit(BitRef::B2, R8::R8HLRef),
+                0x57 => Instruction::Bit(BitRef::B2, R8::R8A),
+                0x58 => Instruction::Bit(BitRef::B3, R8::R8B),
+                0x59 => Instruction::Bit(BitRef::B3, R8::R8C),
+                0x5a => Instruction::Bit(BitRef::B3, R8::R8D),
+                0x5b => Instruction::Bit(BitRef::B3, R8::R8E),
+                0x5c => Instruction::Bit(BitRef::B3, R8::R8H),
+                0x5d => Instruction::Bit(BitRef::B3, R8::R8L),
+                0x5e => Instruction::Bit(BitRef::B3, R8::R8HLRef),
+                0x5f => Instruction::Bit(BitRef::B3, R8::R8A),
+                0x60 => Instruction::Bit(BitRef::B4, R8::R8B),
+                0x61 => Instruction::Bit(BitRef::B4, R8::R8C),
+                0x62 => Instruction::Bit(BitRef::B4, R8::R8D),
+                0x63 => Instruction::Bit(BitRef::B4, R8::R8E),
+                0x64 => Instruction::Bit(BitRef::B4, R8::R8H),
+                0x65 => Instruction::Bit(BitRef::B4, R8::R8L),
+                0x66 => Instruction::Bit(BitRef::B4, R8::R8HLRef),
+                0x67 => Instruction::Bit(BitRef::B4, R8::R8A),
+                0x68 => Instruction::Bit(BitRef::B5, R8::R8B),
+                0x69 => Instruction::Bit(BitRef::B5, R8::R8C),
+                0x6a => Instruction::Bit(BitRef::B5, R8::R8D),
+                0x6b => Instruction::Bit(BitRef::B5, R8::R8E),
+                0x6c => Instruction::Bit(BitRef::B5, R8::R8H),
+                0x6d => Instruction::Bit(BitRef::B5, R8::R8L),
+                0x6e => Instruction::Bit(BitRef::B5, R8::R8HLRef),
+                0x6f => Instruction::Bit(BitRef::B5, R8::R8A),
+                0x70 => Instruction::Bit(BitRef::B6, R8::R8B),
+                0x71 => Instruction::Bit(BitRef::B6, R8::R8C),
+                0x72 => Instruction::Bit(BitRef::B6, R8::R8D),
+                0x73 => Instruction::Bit(BitRef::B6, R8::R8E),
+                0x74 => Instruction::Bit(BitRef::B6, R8::R8H),
+                0x75 => Instruction::Bit(BitRef::B6, R8::R8L),
+                0x76 => Instruction::Bit(BitRef::B6, R8::R8HLRef),
+                0x77 => Instruction::Bit(BitRef::B6, R8::R8A),
+                0x78 => Instruction::Bit(BitRef::B7, R8::R8B),
+                0x79 => Instruction::Bit(BitRef::B7, R8::R8C),
+                0x7a => Instruction::Bit(BitRef::B7, R8::R8D),
+                0x7b => Instruction::Bit(BitRef::B7, R8::R8E),
+                0x7c => Instruction::Bit(BitRef::B7, R8::R8H),
+                0x7d => Instruction::Bit(BitRef::B7, R8::R8L),
+                0x7e => Instruction::Bit(BitRef::B7, R8::R8HLRef),
+                0x7f => Instruction::Bit(BitRef::B7, R8::R8A),
+                0x80 => Instruction::Res(BitRef::B0, R8::R8B),
+                0x81 => Instruction::Res(BitRef::B0, R8::R8C),
+                0x82 => Instruction::Res(BitRef::B0, R8::R8D),
+                0x83 => Instruction::Res(BitRef::B0, R8::R8E),
+                0x84 => Instruction::Res(BitRef::B0, R8::R8H),
+                0x85 => Instruction::Res(BitRef::B0, R8::R8L),
+                0x86 => Instruction::Res(BitRef::B0, R8::R8HLRef),
+                0x87 => Instruction::Res(BitRef::B0, R8::R8A),
+                0x88 => Instruction::Res(BitRef::B1, R8::R8B),
+                0x89 => Instruction::Res(BitRef::B1, R8::R8C),
+                0x8a => Instruction::Res(BitRef::B1, R8::R8D),
+                0x8b => Instruction::Res(BitRef::B1, R8::R8E),
+                0x8c => Instruction::Res(BitRef::B1, R8::R8H),
+                0x8d => Instruction::Res(BitRef::B1, R8::R8L),
+                0x8e => Instruction::Res(BitRef::B1, R8::R8HLRef),
+                0x8f => Instruction::Res(BitRef::B1, R8::R8A),
+                0x90 => Instruction::Res(BitRef::B2, R8::R8B),
+                0x91 => Instruction::Res(BitRef::B2, R8::R8C),
+                0x92 => Instruction::Res(BitRef::B2, R8::R8D),
+                0x93 => Instruction::Res(BitRef::B2, R8::R8E),
+                0x94 => Instruction::Res(BitRef::B2, R8::R8H),
+                0x95 => Instruction::Res(BitRef::B2, R8::R8L),
+                0x96 => Instruction::Res(BitRef::B2, R8::R8HLRef),
+                0x97 => Instruction::Res(BitRef::B2, R8::R8A),
+                0x98 => Instruction::Res(BitRef::B3, R8::R8B),
+                0x99 => Instruction::Res(BitRef::B3, R8::R8C),
+                0x9a => Instruction::Res(BitRef::B3, R8::R8D),
+                0x9b => Instruction::Res(BitRef::B3, R8::R8E),
+                0x9c => Instruction::Res(BitRef::B3, R8::R8H),
+                0x9d => Instruction::Res(BitRef::B3, R8::R8L),
+                0x9e => Instruction::Res(BitRef::B3, R8::R8HLRef),
+                0x9f => Instruction::Res(BitRef::B3, R8::R8A),
+                0xa0 => Instruction::Res(BitRef::B4, R8::R8B),
+                0xa1 => Instruction::Res(BitRef::B4, R8::R8C),
+                0xa2 => Instruction::Res(BitRef::B4, R8::R8D),
+                0xa3 => Instruction::Res(BitRef::B4, R8::R8E),
+                0xa4 => Instruction::Res(BitRef::B4, R8::R8H),
+                0xa5 => Instruction::Res(BitRef::B4, R8::R8L),
+                0xa6 => Instruction::Res(BitRef::B4, R8::R8HLRef),
+                0xa7 => Instruction::Res(BitRef::B4, R8::R8A),
+                0xa8 => Instruction::Res(BitRef::B5, R8::R8B),
+                0xa9 => Instruction::Res(BitRef::B5, R8::R8C),
+                0xaa => Instruction::Res(BitRef::B5, R8::R8D),
+                0xab => Instruction::Res(BitRef::B5, R8::R8E),
+                0xac => Instruction::Res(BitRef::B5, R8::R8H),
+                0xad => Instruction::Res(BitRef::B5, R8::R8L),
+                0xae => Instruction::Res(BitRef::B5, R8::R8HLRef),
+                0xaf => Instruction::Res(BitRef::B5, R8::R8A),
+                0xb0 => Instruction::Res(BitRef::B6, R8::R8B),
+                0xb1 => Instruction::Res(BitRef::B6, R8::R8C),
+                0xb2 => Instruction::Res(BitRef::B6, R8::R8D),
+                0xb3 => Instruction::Res(BitRef::B6, R8::R8E),
+                0xb4 => Instruction::Res(BitRef::B6, R8::R8H),
+                0xb5 => Instruction::Res(BitRef::B6, R8::R8L),
+                0xb6 => Instruction::Res(BitRef::B6, R8::R8HLRef),
+                0xb7 => Instruction::Res(BitRef::B6, R8::R8A),
+                0xb8 => Instruction::Res(BitRef::B7, R8::R8B),
+                0xb9 => Instruction::Res(BitRef::B7, R8::R8C),
+                0xba => Instruction::Res(BitRef::B7, R8::R8D),
+                0xbb => Instruction::Res(BitRef::B7, R8::R8E),
+                0xbc => Instruction::Res(BitRef::B7, R8::R8H),
+                0xbd => Instruction::Res(BitRef::B7, R8::R8L),
+                0xbe => Instruction::Res(BitRef::B7, R8::R8HLRef),
+                0xbf => Instruction::Res(BitRef::B7, R8::R8A),
+                0xc0 => Instruction::Set(BitRef::B0, R8::R8B),
+                0xc1 => Instruction::Set(BitRef::B0, R8::R8C),
+                0xc2 => Instruction::Set(BitRef::B0, R8::R8D),
+                0xc3 => Instruction::Set(BitRef::B0, R8::R8E),
+                0xc4 => Instruction::Set(BitRef::B0, R8::R8H),
+                0xc5 => Instruction::Set(BitRef::B0, R8::R8L),
+                0xc6 => Instruction::Set(BitRef::B0, R8::R8HLRef),
+                0xc7 => Instruction::Set(BitRef::B0, R8::R8A),
+                0xc8 => Instruction::Set(BitRef::B1, R8::R8B),
+                0xc9 => Instruction::Set(BitRef::B1, R8::R8C),
+                0xca => Instruction::Set(BitRef::B1, R8::R8D),
+                0xcb => Instruction::Set(BitRef::B1, R8::R8E),
+                0xcc => Instruction::Set(BitRef::B1, R8::R8H),
+                0xcd => Instruction::Set(BitRef::B1, R8::R8L),
+                0xce => Instruction::Set(BitRef::B1, R8::R8HLRef),
+                0xcf => Instruction::Set(BitRef::B1, R8::R8A),
+                0xd0 => Instruction::Set(BitRef::B2, R8::R8B),
+                0xd1 => Instruction::Set(BitRef::B2, R8::R8C),
+                0xd2 => Instruction::Set(BitRef::B2, R8::R8D),
+                0xd3 => Instruction::Set(BitRef::B2, R8::R8E),
+                0xd4 => Instruction::Set(BitRef::B2, R8::R8H),
+                0xd5 => Instruction::Set(BitRef::B2, R8::R8L),
+                0xd6 => Instruction::Set(BitRef::B2, R8::R8HLRef),
+                0xd7 => Instruction::Set(BitRef::B2, R8::R8A),
+                0xd8 => Instruction::Set(BitRef::B3, R8::R8B),
+                0xd9 => Instruction::Set(BitRef::B3, R8::R8C),
+                0xda => Instruction::Set(BitRef::B3, R8::R8D),
+                0xdb => Instruction::Set(BitRef::B3, R8::R8E),
+                0xdc => Instruction::Set(BitRef::B3, R8::R8H),
+                0xdd => Instruction::Set(BitRef::B3, R8::R8L),
+                0xde => Instruction::Set(BitRef::B3, R8::R8HLRef),
+                0xdf => Instruction::Set(BitRef::B3, R8::R8A),
+                0xe0 => Instruction::Set(BitRef::B4, R8::R8B),
+                0xe1 => Instruction::Set(BitRef::B4, R8::R8C),
+                0xe2 => Instruction::Set(BitRef::B4, R8::R8D),
+                0xe3 => Instruction::Set(BitRef::B4, R8::R8E),
+                0xe4 => Instruction::Set(BitRef::B4, R8::R8H),
+                0xe5 => Instruction::Set(BitRef::B4, R8::R8L),
+                0xe6 => Instruction::Set(BitRef::B4, R8::R8HLRef),
+                0xe7 => Instruction::Set(BitRef::B4, R8::R8A),
+                0xe8 => Instruction::Set(BitRef::B5, R8::R8B),
+                0xe9 => Instruction::Set(BitRef::B5, R8::R8C),
+                0xea => Instruction::Set(BitRef::B5, R8::R8D),
+                0xeb => Instruction::Set(BitRef::B5, R8::R8E),
+                0xec => Instruction::Set(BitRef::B5, R8::R8H),
+                0xed => Instruction::Set(BitRef::B5, R8::R8L),
+                0xee => Instruction::Set(BitRef::B5, R8::R8HLRef),
+                0xef => Instruction::Set(BitRef::B5, R8::R8A),
+                0xf0 => Instruction::Set(BitRef::B6, R8::R8B),
+                0xf1 => Instruction::Set(BitRef::B6, R8::R8C),
+                0xf2 => Instruction::Set(BitRef::B6, R8::R8D),
+                0xf3 => Instruction::Set(BitRef::B6, R8::R8E),
+                0xf4 => Instruction::Set(BitRef::B6, R8::R8H),
+                0xf5 => Instruction::Set(BitRef::B6, R8::R8L),
+                0xf6 => Instruction::Set(BitRef::B6, R8::R8HLRef),
+                0xf7 => Instruction::Set(BitRef::B6, R8::R8A),
+                0xf8 => Instruction::Set(BitRef::B7, R8::R8B),
+                0xf9 => Instruction::Set(BitRef::B7, R8::R8C),
+                0xfa => Instruction::Set(BitRef::B7, R8::R8D),
+                0xfb => Instruction::Set(BitRef::B7, R8::R8E),
+                0xfc => Instruction::Set(BitRef::B7, R8::R8H),
+                0xfd => Instruction::Set(BitRef::B7, R8::R8L),
+                0xfe => Instruction::Set(BitRef::B7, R8::R8HLRef),
+                0xff => Instruction::Set(BitRef::B7, R8::R8A),
             },
-            _ => unreachable!(),
+            0xd3 | 0xdb | 0xdd | 0xe3 | 0xe4 | 0xeb | 0xec | 0xed | 0xf4 | 0xfc | 0xfd => {
+                unreachable!()
+            }
         };
-
-        let insn_size = result.size();
-        Ok((result, insn_size))
+        Ok((insn, size))
     }
 }
 
@@ -1135,25 +1922,25 @@ mod tests {
         assert_eq!(Instruction::size_header(0x9).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x9], 0, 1).unwrap(),
-            (Instruction::AddHLR16(R16::BC), 1)
+            (Instruction::AddHLR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x1).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0x1, 0x34, 0x12], 0, 3).unwrap(),
-            (Instruction::LoadR16N16(R16::BC, 0x1234), 3)
+            (Instruction::LoadR16N16(R16::R16BC, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x2).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x2], 0, 1).unwrap(),
-            (Instruction::StoreAR16Mem(R16Mem::BC), 1)
+            (Instruction::StoreAR16Mem(R16Mem::R16MemBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xa).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xa], 0, 1).unwrap(),
-            (Instruction::LoadAR16Mem(R16Mem::BC), 1)
+            (Instruction::LoadAR16Mem(R16Mem::R16MemBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x8).unwrap(), 3);
@@ -1165,31 +1952,31 @@ mod tests {
         assert_eq!(Instruction::size_header(0x3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x3], 0, 1).unwrap(),
-            (Instruction::IncR16(R16::BC), 1)
+            (Instruction::IncR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xb).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xb], 0, 1).unwrap(),
-            (Instruction::DecR16(R16::BC), 1)
+            (Instruction::DecR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x4).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x4], 0, 1).unwrap(),
-            (Instruction::IncR8(R8::B), 1)
+            (Instruction::IncR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x5).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x5], 0, 1).unwrap(),
-            (Instruction::DecR8(R8::B), 1)
+            (Instruction::DecR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x6).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0x6, 0x34], 0, 2).unwrap(),
-            (Instruction::LoadR8N8(R8::B, 0x34), 2)
+            (Instruction::LoadR8N8(R8::R8B, 0x34), 2)
         );
 
         assert_eq!(Instruction::size_header(0x18).unwrap(), 2);
@@ -1200,7 +1987,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
-            (Instruction::JumpNearCond(Cond::C, 0x34), 2)
+            (Instruction::JumpNearCond(Cond::CondC, 0x34), 2)
         );
 
         assert_eq!(Instruction::size_header(0xC3).unwrap(), 3);
@@ -1211,7 +1998,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
-            (Instruction::JumpFarCond(Cond::Z, 0x1234), 3)
+            (Instruction::JumpFarCond(Cond::CondZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
@@ -1226,7 +2013,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0x40).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x40], 0, 1).unwrap(),
-            (Instruction::LoadR8R8(R8::B, R8::B), 1)
+            (Instruction::LoadR8R8(R8::R8B, R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x76).unwrap(), 1);
@@ -1241,43 +2028,43 @@ mod tests {
         assert_eq!(Instruction::size_header(0x10 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x10 << 3], 0, 1).unwrap(),
-            (Instruction::AddR8(R8::B), 1)
+            (Instruction::AddR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x11 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x11 << 3], 0, 1).unwrap(),
-            (Instruction::AdcR8(R8::B), 1)
+            (Instruction::AdcR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x12 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x12 << 3], 0, 1).unwrap(),
-            (Instruction::SubR8(R8::B), 1)
+            (Instruction::SubR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x13 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x13 << 3], 0, 1).unwrap(),
-            (Instruction::SbcR8(R8::B), 1)
+            (Instruction::SbcR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x14 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x14 << 3], 0, 1).unwrap(),
-            (Instruction::AndR8(R8::B), 1)
+            (Instruction::AndR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x15 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x15 << 3], 0, 1).unwrap(),
-            (Instruction::XorR8(R8::B), 1)
+            (Instruction::XorR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x16 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x16 << 3], 0, 1).unwrap(),
-            (Instruction::OrR8(R8::B), 1)
+            (Instruction::OrR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x17 << 3).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0x17 << 3], 0, 1).unwrap(),
-            (Instruction::CpR8(R8::B), 1)
+            (Instruction::CpR8(R8::R8B), 1)
         );
     }
 
@@ -1348,7 +2135,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xc0).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
-            (Instruction::RetCond(Cond::NZ), 1)
+            (Instruction::RetCond(Cond::CondNZ), 1)
         );
 
         assert_eq!(Instruction::size_header(0xdf).unwrap(), 1);
@@ -1366,19 +2153,19 @@ mod tests {
         assert_eq!(Instruction::size_header(0xc4).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc4, 0x34, 0x12], 0, 3).unwrap(),
-            (Instruction::CallCondA16(Cond::NZ, 0x1234), 3)
+            (Instruction::CallCondA16(Cond::CondNZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xc1).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc1], 0, 1).unwrap(),
-            (Instruction::PopR16Stack(R16Stack::BC), 1)
+            (Instruction::PopR16Stack(R16Stack::R16StackBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xc5).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xc5], 0, 1).unwrap(),
-            (Instruction::PushR16Stack(R16Stack::BC), 1)
+            (Instruction::PushR16Stack(R16Stack::R16StackBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xe2).unwrap(), 1);
@@ -1424,7 +2211,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
         assert_eq!(
             Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
-            (Instruction::JumpFarCond(Cond::Z, 0x1234), 3)
+            (Instruction::JumpFarCond(Cond::CondZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xF8).unwrap(), 2);
@@ -1451,48 +2238,48 @@ mod tests {
 
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x00], 0, 2).unwrap(),
-            (Instruction::Rlc(R8::B), 2)
+            (Instruction::Rlc(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x08], 0, 2).unwrap(),
-            (Instruction::Rrc(R8::B), 2)
+            (Instruction::Rrc(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x10], 0, 2).unwrap(),
-            (Instruction::Rl(R8::B), 2)
+            (Instruction::Rl(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x18], 0, 2).unwrap(),
-            (Instruction::Rr(R8::B), 2)
+            (Instruction::Rr(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x20], 0, 2).unwrap(),
-            (Instruction::Sla(R8::B), 2)
+            (Instruction::Sla(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x28], 0, 2).unwrap(),
-            (Instruction::Sra(R8::B), 2)
+            (Instruction::Sra(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x30], 0, 2).unwrap(),
-            (Instruction::Swap(R8::B), 2)
+            (Instruction::Swap(R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x38], 0, 2).unwrap(),
-            (Instruction::Srl(R8::B), 2)
+            (Instruction::Srl(R8::R8B), 2)
         );
 
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x40], 0, 2).unwrap(),
-            (Instruction::Bit(BitRef::B0, R8::B), 2)
+            (Instruction::Bit(BitRef::B0, R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x80], 0, 2).unwrap(),
-            (Instruction::Res(BitRef::B0, R8::B), 2)
+            (Instruction::Res(BitRef::B0, R8::R8B), 2)
         );
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0xC0], 0, 2).unwrap(),
-            (Instruction::Set(BitRef::B0, R8::B), 2)
+            (Instruction::Set(BitRef::B0, R8::R8B), 2)
         );
     }
 
@@ -1503,7 +2290,7 @@ mod tests {
         let buf = [0x2];
         let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
         assert_eq!(size, 1);
-        assert_eq!(insn, Instruction::StoreAR16Mem(R16Mem::BC));
+        assert_eq!(insn, Instruction::StoreAR16Mem(R16Mem::R16MemBC));
         let encoded = insn.encode();
         assert_eq!(encoded, buf);
     }
@@ -1514,7 +2301,7 @@ mod tests {
         let buf = [0x5];
         let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
         assert_eq!(size, 1);
-        assert_eq!(insn, Instruction::DecR8(R8::B));
+        assert_eq!(insn, Instruction::DecR8(R8::R8B));
         let encoded = insn.encode();
         assert_eq!(encoded, buf);
     }
@@ -1525,7 +2312,7 @@ mod tests {
         let buf = [0xa];
         let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
         assert_eq!(size, 1);
-        assert_eq!(insn, Instruction::LoadAR16Mem(R16Mem::BC));
+        assert_eq!(insn, Instruction::LoadAR16Mem(R16Mem::R16MemBC));
         let encoded = insn.encode();
         assert_eq!(encoded, buf);
     }
@@ -1546,7 +2333,7 @@ mod tests {
         assert_eq!(Instruction::size_header(0xa8).unwrap(), 1);
         assert_eq!(
             Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
-            (Instruction::XorR8(R8::B), 1)
+            (Instruction::XorR8(R8::R8B), 1)
         );
     }
 
@@ -1557,7 +2344,7 @@ mod tests {
             if opcode == 0xCB || ILLEGAL_INSTRUCTIONS.contains(&opcode) {
                 continue;
             }
-            let size = Instruction::size_header_2(opcode).unwrap() as usize;
+            let size = Instruction::size_header(opcode).unwrap() as usize;
             let buf = &[opcode, payload[0], payload[1]][..size];
             let (insn, _) = Instruction::from_u8_slice(buf, 0, size).unwrap();
             let encoded = insn.encode();
