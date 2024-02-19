@@ -291,7 +291,7 @@ pub enum Instruction {
     RlA,                    // 0x17
     JumpNear(E8),           // 0x18
     RrA,                    // 0x1F
-    JumpNearCond(E8, Cond), // 0x20
+    JumpNearCond(Cond, E8), // 0x20
     Daa,                    // 0x27
     Cpl,                    // 0x2f
     Scf,                    // 0x37
@@ -308,8 +308,8 @@ pub enum Instruction {
     CpR8(R8),               // 0xB8
     RetCond(Cond),          // 0xc0
     PopR16Stack(R16Stack),  // 0xc1
-    // jp cond // 0xC2
-    // jp // 0xc3
+    JumpFarCond(Cond, A16), // 0xc2
+    JumpFar(A16),           // 0xc3
     CallCondA16(Cond, A16), // 0xc4
     PushR16Stack(R16Stack), // 0xC5
     // ADDAImm8 // 0xC6
@@ -393,6 +393,8 @@ impl Display for Instruction {
             Instruction::CallCondA16(cond, a16) => write!(f, "call {}, {:#04x}", cond, a16),
             Instruction::JumpNear(e8) => write!(f, "jr {:+}", e8),
             Instruction::JumpNearCond(e8, cond) => write!(f, "jr {}, {:+}", cond, e8),
+            Instruction::JumpFar(a16) => write!(f, "jp {:#04x}", a16),
+            Instruction::JumpFarCond(cond, a16) => write!(f, "jp {}, {:#04x}", cond, a16),
             Instruction::Ret => write!(f, "ret"),
             Instruction::RetCond(cond) => write!(f, "ret {}", cond),
             Instruction::IncR16(r16) => write!(f, "inc {}", r16),
@@ -475,6 +477,7 @@ impl Instruction {
                     0xc4 => 3,                             // call cond, imm16
                     0xf5 | 0xe5 | 0xd5 | 0xc5 => 1,        // push
                     0xc1 | 0xd1 | 0xe1 | 0xf1 => 1,        // pop
+                    0xC2 | 0xCA | 0xD2 | 0xDA | 0xC3 => 3, // jp
                     0xc0 | 0xc8 | 0xd0 | 0xd8 | 0xc9 => 1, // ret
                     _ => return Err(InstructionError::Unknown(insn).into()),
                 },
@@ -495,25 +498,13 @@ impl Instruction {
                 vec![0xc4 | cond.as_operand(), *a16 as u8, (*a16 >> 8) as u8]
             }
             Instruction::JumpNear(e8) => vec![0x18, *e8 as u8],
-            Instruction::JumpNearCond(e8, cond) => {
-                let cond = match cond {
-                    Cond::NZ => 0b00,
-                    Cond::Z => 0b01,
-                    Cond::NC => 0b10,
-                    Cond::C => 0b11,
-                };
-                vec![0x20 | cond << 3, *e8 as u8]
+            Instruction::JumpNearCond(cond, e8) => vec![0x20 | cond.as_operand() << 3, *e8 as u8],
+            Instruction::JumpFar(a16) => vec![0xc3, *a16 as u8, (*a16 >> 8) as u8],
+            Instruction::JumpFarCond(cond, a16) => {
+                vec![0xc2 | cond.as_operand() << 3, *a16 as u8, (*a16 >> 8) as u8]
             }
             Instruction::Ret => vec![0xc9],
-            Instruction::RetCond(cond) => {
-                let cond = match cond {
-                    Cond::NZ => 0b00,
-                    Cond::Z => 0b01,
-                    Cond::NC => 0b10,
-                    Cond::C => 0b11,
-                };
-                vec![0xc0 | cond << 3]
-            }
+            Instruction::RetCond(cond) => vec![0xc0 | cond.as_operand() << 3],
             Instruction::LoadR16N16(op, val) => {
                 vec![0x01 | op.as_operand() << 4, *val as u8, (*val >> 8) as u8]
             }
@@ -584,8 +575,8 @@ impl Instruction {
             Instruction::StopN8(_) => 2,
             Instruction::CallA16(_) => 3,
             Instruction::CallCondA16(_, _) => 3,
-            Instruction::JumpNear(_) => 2,
-            Instruction::JumpNearCond(_, _) => 2,
+            Instruction::JumpNear(_) | Instruction::JumpNearCond(_, _) => 2,
+            Instruction::JumpFar(_) | Instruction::JumpFarCond(_, _) => 3,
             Instruction::Ret => 1,
             Instruction::RetCond(_) => 1,
 
@@ -657,6 +648,8 @@ impl Instruction {
             Instruction::CallCondA16(_, _) => (24, 12),
             Instruction::JumpNear(_) => (12, 8),
             Instruction::JumpNearCond(_, _) => (12, 8),
+            Instruction::JumpFar(_) => (16, 12),
+            Instruction::JumpFarCond(_, _) => (16, 12),
             Instruction::Ret => (16, 16),
             Instruction::RetCond(_) => (20, 8),
 
@@ -772,8 +765,8 @@ impl Instruction {
                             Instruction::JumpNear(Self::read_u8_helper(buf, addr + 1) as i8)
                         } else {
                             Instruction::JumpNearCond(
-                                Self::read_u8_helper(buf, addr + 1) as i8,
                                 Cond::from_operand((byte >> 3) & 0x3),
+                                Self::read_u8_helper(buf, addr + 1) as i8,
                             )
                         }
                     }
@@ -852,6 +845,7 @@ impl Instruction {
                     Cond::from_operand(byte >> 3 & 0x3),
                     Self::read_u16_helper(buf, addr + 1),
                 ),
+
                 0xc5 => Instruction::PushR16Stack(R16Stack::BC),
                 0xd5 => Instruction::PushR16Stack(R16Stack::DE),
                 0xe5 => Instruction::PushR16Stack(R16Stack::HL),
@@ -865,6 +859,12 @@ impl Instruction {
                 0xc9 => Instruction::Ret,
                 0xd0 => Instruction::RetCond(Cond::NC),
                 0xd8 => Instruction::RetCond(Cond::C),
+                0xC2 => Instruction::JumpFarCond(Cond::NZ, Self::read_u16_helper(buf, addr + 1)),
+                0xCA => Instruction::JumpFarCond(Cond::Z, Self::read_u16_helper(buf, addr + 1)),
+                0xD2 => Instruction::JumpFarCond(Cond::NC, Self::read_u16_helper(buf, addr + 1)),
+                0xDA => Instruction::JumpFarCond(Cond::C, Self::read_u16_helper(buf, addr + 1)),
+                0xC3 => Instruction::JumpFar(Self::read_u16_helper(buf, addr + 1)),
+
                 _ => return Err(InstructionError::Unknown(byte).into()),
             },
             _ => unreachable!(),
@@ -1012,7 +1012,18 @@ mod tests {
         assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
         assert_eq!(
             Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
-            (Instruction::JumpNearCond(0x34, Cond::C), 2)
+            (Instruction::JumpNearCond(Cond::C, 0x34), 2)
+        );
+
+        assert_eq!(Instruction::size_header(0xC3).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::JumpFar(0x1234), 3)
+        );
+        assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::JumpFarCond(Cond::Z, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
@@ -1151,6 +1162,18 @@ mod tests {
         assert_eq!(
             Instruction::from_u8_slice(&[0xfa, 0x34, 0x12], 0, 3).unwrap(),
             (Instruction::LoadAA16(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xC3).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::JumpFar(0x1234), 3)
+        );
+
+        assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
+            (Instruction::JumpFarCond(Cond::Z, 0x1234), 3)
         );
     }
 
