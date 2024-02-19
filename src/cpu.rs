@@ -528,6 +528,241 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
                 self.af.single.a = result;
             },
+
+            Instruction::Rlc(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x80 == 0x80;
+                let result = (val << 1) | (c as u8);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Rrc(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x1 == 0x1;
+                let result = (val >> 1) | ((c as u8) << 7);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+
+            Instruction::Rl(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x80 == 0x80;
+                let result = (val << 1) | ((self.af.single.f & 0x10) >> 4);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Rr(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x1 == 0x1;
+                let result = (val >> 1) | ((self.af.single.f & 0x10) << 3);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Sla(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x80 == 0x80;
+                let result = val << 1;
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Sra(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x1 == 0x1;
+                let result = (val >> 1) | (val & 0x80);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Swap(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let result = (val >> 4) | (val << 4);
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                let c = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+            Instruction::Srl(r8) => unsafe {
+                let val = match r8 {
+                    R8::B => self.bc.single.b,
+                    R8::C => self.bc.single.c,
+                    R8::D => self.de.single.d,
+                    R8::E => self.de.single.e,
+                    R8::H => self.hl.single.h,
+                    R8::L => self.hl.single.l,
+                    R8::HLRef => self.bus.read_u8(self.hl.hl)?,
+                    R8::A => self.af.single.a,
+                };
+                let c = val & 0x1 == 0x1;
+                let result = val >> 1;
+                let z = result == 0;
+                let n = false;
+                let h = false;
+                self.af.single.f =
+                    ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
+                match r8 {
+                    R8::B => self.bc.single.b = result,
+                    R8::C => self.bc.single.c = result,
+                    R8::D => self.de.single.d = result,
+                    R8::E => self.de.single.e = result,
+                    R8::H => self.hl.single.h = result,
+                    R8::L => self.hl.single.l = result,
+                    R8::HLRef => self.bus.write_u8(self.hl.hl, result)?,
+                    R8::A => self.af.single.a = result,
+                };
+            },
+
             Instruction::Bit(bit, r8) => unsafe {
                 let mask: u8 = 1 << bit.encode();
                 let val = match r8 {

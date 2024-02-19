@@ -339,14 +339,14 @@ pub enum Instruction {
     // CPAImm8 // 0xFE
 
     // Prefixed instructions
-    // RLC  - 0x00
-    // RRC  - 0x08
-    // RL   - 0x10
-    // RR   - 0x18
-    // SLA  - 0x20
-    // SRA  - 0x28
-    // SWAP - 0x30
-    // SRL  - 0x38
+    Rlc(R8),         // 0x00
+    Rrc(R8),         // 0x08
+    Rl(R8),          // 0x10
+    Rr(R8),          // 0x18
+    Sla(R8),         // 0x20
+    Sra(R8),         // 0x28
+    Swap(R8),        // 0x30
+    Srl(R8),         // 0x38
     Bit(BitRef, R8), // 0x40
     Res(BitRef, R8), // 0x80
     Set(BitRef, R8), // 0xC0
@@ -408,6 +408,15 @@ impl Display for Instruction {
             Instruction::XorR8(source) => write!(f, "xor A, {}", source),
             Instruction::OrR8(source) => write!(f, "or A, {}", source),
             Instruction::CpR8(source) => write!(f, "cp A, {}", source),
+
+            Instruction::Rlc(r8) => write!(f, "rlc {}", r8),
+            Instruction::Rrc(r8) => write!(f, "rrc {}", r8),
+            Instruction::Rl(r8) => write!(f, "rl {}", r8),
+            Instruction::Rr(r8) => write!(f, "rr {}", r8),
+            Instruction::Sla(r8) => write!(f, "sla {}", r8),
+            Instruction::Sra(r8) => write!(f, "sra {}", r8),
+            Instruction::Swap(r8) => write!(f, "swap {}", r8),
+            Instruction::Srl(r8) => write!(f, "srl {}", r8),
 
             Instruction::Bit(b3, r8) => write!(f, "bit {}, {}", b3, r8),
             Instruction::Res(b3, r8) => write!(f, "res {}, {}", b3, r8),
@@ -546,6 +555,15 @@ impl Instruction {
             Instruction::XorR8(source) => vec![0x15 << 3 | source.as_operand()],
             Instruction::OrR8(source) => vec![0x16 << 3 | source.as_operand()],
             Instruction::CpR8(source) => vec![0x17 << 3 | source.as_operand()],
+            Instruction::Rlc(r8) => vec![0x0 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rrc(r8) => vec![0x1 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rl(r8) => vec![0x2 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Rr(r8) => vec![0x3 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Sla(r8) => vec![0x4 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Sra(r8) => vec![0x5 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Swap(r8) => vec![0x6 << 6 | r8.as_operand() << 3 | 0b000],
+            Instruction::Srl(r8) => vec![0x7 << 6 | r8.as_operand() << 3 | 0b000],
+
             Instruction::Bit(b3, r8) => {
                 vec![0xCB, 0b01_000_000 | b3.encode() << 3 | r8.as_operand()]
             }
@@ -598,6 +616,15 @@ impl Instruction {
             Instruction::XorR8(_) => 1,
             Instruction::OrR8(_) => 1,
             Instruction::CpR8(_) => 1,
+
+            Instruction::Rlc(_) => 2,
+            Instruction::Rrc(_) => 2,
+            Instruction::Rl(_) => 2,
+            Instruction::Rr(_) => 2,
+            Instruction::Sla(_) => 2,
+            Instruction::Sra(_) => 2,
+            Instruction::Swap(_) => 2,
+            Instruction::Srl(_) => 2,
 
             Instruction::Bit(_, _) => 2,
             Instruction::Res(_, _) => 2,
@@ -652,6 +679,15 @@ impl Instruction {
             Instruction::XorR8(_) => (4, 4),
             Instruction::OrR8(_) => (4, 4),
             Instruction::CpR8(_) => (4, 4),
+
+            Instruction::Rlc(_) => (8, 8),
+            Instruction::Rrc(_) => (8, 8),
+            Instruction::Rl(_) => (8, 8),
+            Instruction::Rr(_) => (8, 8),
+            Instruction::Sla(_) => (8, 8),
+            Instruction::Sra(_) => (8, 8),
+            Instruction::Swap(_) => (8, 8),
+            Instruction::Srl(_) => (8, 8),
 
             Instruction::Bit(_, _) => (8, 8),
             Instruction::Res(_, _) => (8, 8),
@@ -749,6 +785,20 @@ impl Instruction {
                 0xcb => {
                     let byte = buf[addr as usize + 1];
                     match byte >> 6 {
+                        0b00 => {
+                            let op = R8::from_operand(byte & 0x7);
+                            match byte >> 3 & 0x7 {
+                                0x0 => Instruction::Rlc(op),
+                                0x1 => Instruction::Rrc(op),
+                                0x2 => Instruction::Rl(op),
+                                0x3 => Instruction::Rr(op),
+                                0x4 => Instruction::Sla(op),
+                                0x5 => Instruction::Sra(op),
+                                0x6 => Instruction::Swap(op),
+                                0x7 => Instruction::Srl(op),
+                                _ => return Err(InstructionError::Unknown(byte).into()),
+                            }
+                        }
                         0b01 => Instruction::Bit(
                             BitRef::decode((byte >> 3) & 0x7),
                             R8::from_operand(byte & 0x7),
@@ -1027,6 +1077,40 @@ mod tests {
     #[test]
     fn prefixed() {
         assert_eq!(Instruction::size_header(0xCB).unwrap(), 2);
+
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x00], 0, 2).unwrap(),
+            (Instruction::Rlc(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x08], 0, 2).unwrap(),
+            (Instruction::Rrc(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x10], 0, 2).unwrap(),
+            (Instruction::Rl(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x18], 0, 2).unwrap(),
+            (Instruction::Rr(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x20], 0, 2).unwrap(),
+            (Instruction::Sla(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x28], 0, 2).unwrap(),
+            (Instruction::Sra(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x30], 0, 2).unwrap(),
+            (Instruction::Swap(R8::B), 2)
+        );
+        assert_eq!(
+            Instruction::from_u8_slice(&[0xCB, 0x38], 0, 2).unwrap(),
+            (Instruction::Srl(R8::B), 2)
+        );
+
         assert_eq!(
             Instruction::from_u8_slice(&[0xCB, 0x40], 0, 2).unwrap(),
             (Instruction::Bit(BitRef::B0, R8::B), 2)
