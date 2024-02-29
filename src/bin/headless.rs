@@ -174,15 +174,13 @@ fn main() -> Result<()> {
                             // println!("{:?}", machine.cpu.registers);
                         }
                         "reset" => machine.reset().unwrap(),
-                        "xr" => {
-                            let reg = on_error!(
-                                continue 'step,
-                                machine,
-                                running,
-                                RegRef::from_str(args.next().expect(&"USAGE: xr REG"))
-                            );
-                            println!("{}", machine.cpu.render_reg_val(reg));
-                        }
+                        "xr" => match args.next() {
+                            Some(arg) => {
+                                let reg = RegRef::from_str(arg).expect("USAGE: xr REG");
+                                println!("{}", machine.cpu.render_reg_val(reg));
+                            }
+                            None => println!("{}", machine.cpu),
+                        },
                         "xb" => {
                             let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
                             let byte = read_u8!(continue 'step, machine, running, addr);
