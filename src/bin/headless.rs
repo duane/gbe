@@ -53,21 +53,28 @@ fn main() -> Result<()> {
                             running = true;
                             continue;
                         }
-                        "dis" => {
-                            let addr = machine.cpu.pc;
-                            let insn = machine.cpu.bus.read_u8(addr)?;
-                            let size =
-                                gbc::instruction::Instruction::size_header(insn).unwrap() as u16;
-                            let buf: Vec<u8> = (0..size)
-                                .map(|i| machine.cpu.bus.read_u8(addr + i).unwrap())
-                                .collect();
-                            let (structured, _) = gbc::instruction::Instruction::from_u8_slice(
-                                &buf,
-                                0,
-                                size as usize,
-                            )
-                            .unwrap();
-                            println!("{:04x}: {}", addr, structured);
+                        "list" => {
+                            let count = 12;
+                            let mut addr = match args.next() {
+                                Some(addr) => u16::from_str_radix(addr, 16).unwrap(),
+                                None => machine.cpu.pc,
+                            };
+                            for _ in 0..count {
+                                let insn = machine.cpu.bus.read_u8(addr)?;
+                                let size = gbc::instruction::Instruction::size_header(insn).unwrap()
+                                    as u16;
+                                let buf: Vec<u8> = (0..size)
+                                    .map(|i| machine.cpu.bus.read_u8(addr + i).unwrap())
+                                    .collect();
+                                let (structured, _) = gbc::instruction::Instruction::from_u8_slice(
+                                    &buf,
+                                    0,
+                                    size as usize,
+                                )
+                                .unwrap();
+                                println!("{:04x}: {}", addr, structured);
+                                addr += size;
+                            }
                         }
                         "continue" => {
                             running = true;
