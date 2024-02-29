@@ -149,6 +149,7 @@ fn main() -> Result<()> {
                         "regs" => {
                             // println!("{:?}", machine.cpu.registers);
                         }
+                        "reset" => machine.reset().unwrap(),
                         "xr" => {
                             let reg = on_error!(
                                 continue 'step,

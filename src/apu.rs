@@ -69,6 +69,31 @@ impl APU {
         Default::default()
     }
 
+    pub fn reset(&mut self) {
+        self.nr10 = 0;
+        self.nr11 = 0;
+        self.nr12 = 0;
+        self.nr13 = 0;
+        self.nr14 = 0;
+        self.nr21 = 0;
+        self.nr22 = 0;
+        self.nr23 = 0;
+        self.nr24 = 0;
+        self.nr30 = 0;
+        self.nr31 = 0;
+        self.nr32 = 0;
+        self.nr33 = 0;
+        self.nr34 = 0;
+        self.nr41 = 0;
+        self.nr42 = 0;
+        self.nr43 = 0;
+        self.nr44 = 0;
+        self.nr50 = NR50Register::default();
+        self.nr51 = NR51Register::default();
+        self.nr52 = NR52Register::default();
+        self.wave_ram = [0; 0x10];
+    }
+
     pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
             NR10 => self.nr10 = data,

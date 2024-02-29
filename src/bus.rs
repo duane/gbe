@@ -40,6 +40,11 @@ impl Bus {
 
     pub fn reset(&mut self) {
         self.work_ram = [0; ROM_SIZE + ROMX_SIZE];
+        self.serial_out.reset();
+        self.apu.reset();
+        self.external_ram = [0; SRAM_SIZE];
+        self.high_ram = [0; HRAM_SIZE];
+        self.ppu.reset();
     }
 
     pub fn read_u16(&self, addr: u16) -> Result<u16> {

@@ -16,4 +16,9 @@ impl Machine {
     pub fn step(&mut self) -> Result<()> {
         self.cpu.execute_single_instruction()
     }
+
+    pub fn reset(&mut self) -> Result<()> {
+        self.cpu.reset();
+        Ok(())
+    }
 }

@@ -24,6 +24,11 @@ impl SerialOut {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.sb = 0;
+        self.sc = SCRegister::from_bits(0x0);
+    }
+
     pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
             SB => self.sb = data,

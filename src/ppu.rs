@@ -69,6 +69,15 @@ impl PPU {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.vram = [0; SCRN1_END as usize - VRAM as usize + 1];
+        self.mode = Mode::OAMScan;
+        self.dot_counter = 0;
+        self.lcdc = LCDControl::empty();
+        self.bgp = BGPRegister::default();
+        self.scy = 0;
+        self.scx = 0;
+    }
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             BGP => self.bgp.into_bits(),
