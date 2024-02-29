@@ -5,12 +5,13 @@ edition = "2021"
 
 [features]
 gfx = ["bevy"]
+precompute = ["regex"]
 default = ["gfx"]
 
 [[bin]]
 name = "precompute"
 path = "src/bin/precompute.rs"
-required-features = []
+required-features = ["precompute"]
 
 [[bin]]
 name = "dis"
@@ -29,6 +30,10 @@ required-features = []
 
 [dependencies]
 thiserror = "1.0.57"
+
+[dependencies.regex]
+version = "1.5.4"
+optional = true
 
 [dependencies.color-eyre]
 version = "0.6.2"
