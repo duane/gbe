@@ -425,9 +425,9 @@ pub const ILLEGAL_INSTRUCTIONS: [u8; 11] = [
 
 #[derive(Error, Debug)]
 pub enum InstructionError {
-    #[error("Unknown Instruction - {0:#02x}")]
+    #[error("Unknown Instruction - ${0:02x}")]
     Illegal(u8),
-    #[error("Unknown instruction - {0:#02x}")]
+    #[error("Unknown instruction - ${0:02x}")]
     Unknown(u8),
     #[error("Instruction is incomplete - {0:02x?}")]
     Incomplete(Vec<u8>),
@@ -438,7 +438,7 @@ impl Display for Instruction {
         match self {
             Instruction::Nop => write!(f, "nop"),
             Instruction::Halt => write!(f, "halt"),
-            Instruction::StopN8(val) => write!(f, "stop {:#02x}", val),
+            Instruction::StopN8(val) => write!(f, "stop ${:02x}", val),
 
             Instruction::LoadR16N16(r16, imm16) => write!(f, "ld {}, {}", r16, imm16),
             Instruction::LoadAR16Mem(r16mem) => write!(f, "ld a, [{}]", r16mem),
@@ -456,7 +456,7 @@ impl Display for Instruction {
 
             Instruction::PushR16Stack(operand) => write!(f, "push {}", operand),
             Instruction::PopR16Stack(operand) => write!(f, "pop {}", operand),
-            Instruction::CallA16(a16) => write!(f, "call #{:04x}", a16),
+            Instruction::CallA16(a16) => write!(f, "call ${:04x}", a16),
             Instruction::CallCondA16(cond, a16) => write!(f, "call {}, ${:04x}", cond, a16),
             Instruction::JumpNear(e8) => write!(f, "jr {:+}", e8),
             Instruction::JumpNearCond(e8, cond) => write!(f, "jr {}, {:+}", cond, e8),

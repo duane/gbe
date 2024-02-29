@@ -9,9 +9,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum BusError {
-    #[error("Invalid Read - {0} - {1:#04x}")]
+    #[error("Invalid Read - {0} - ${1:04x}")]
     InvalidRead(String, u16),
-    #[error("Invalid Write - {0} - {2:#02x} to {1:#04x}")]
+    #[error("Invalid Write - {0} - ${2:02x} to ${1:04x}")]
     InvalidWrite(String, u16, u8),
 }
 

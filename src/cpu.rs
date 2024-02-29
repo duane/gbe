@@ -1104,10 +1104,10 @@ impl Display for CPU {
         unsafe {
             write!(
                 f,
-                "CPU {{\n\ti: {:2X},\tr: {:2X},\n\tpc: {:4X},\tsp: {:4X},\n\ta: {:2X},\tb: {:2X},\tc: {:2X},\td: {:2X},\te: {:2X},\tf: {:2X},\th: {:2X},\tl: {:2X},\n\taf: {:4X},\tbc: {:4X},\tde: {:4X},\thl: {:4X},\n\tm: {:2X},\tt: {:2X}\n}}\n",
+                "CPU {{\n\ti: ${:02x},\tr: ${:02x},\n\tpc: ${:04x},\tsp: ${:04x},\n\ta: ${:02x},\tf: ${:02x},\tb: ${:02x},\tc: ${:02x},\td: ${:02x},\te: ${:02x},\th: ${:02x},\tl: ${:02x},\n\taf: ${:04x},\tbc: ${:04x},\tde: ${:04x},\thl: ${:04x},\n\tm: ${:02x},\tt: ${:02x}\n}}\n",
                 self.i, self.r,
                 self.pc, self.sp,
-                self.af.single.a, self.bc.single.b, self.bc.single.c, self.bc.single.c, self.de.single.d, self.de.single.e, self.hl.single.h, self.hl.single.l,
+                self.af.single.a, self.af.single.f, self.bc.single.b, self.bc.single.c, self.de.single.d, self.de.single.e, self.hl.single.h, self.hl.single.l,
                 self.af.af, self.bc.bc, self.de.de, self.hl.hl,
                 self.m, self.t,
             )?;

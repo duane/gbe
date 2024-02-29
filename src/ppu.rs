@@ -74,7 +74,7 @@ impl PPU {
             BGP => self.bgp.into_bits(),
             LCDC => self.lcdc.bits(),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize],
-            _ => panic!("Invalid PPU read {:#04x}", addr),
+            _ => panic!("Invalid PPU read ${:04x}", addr),
         }
     }
 
@@ -83,7 +83,7 @@ impl PPU {
             BGP => self.bgp = BGPRegister::from_bits(data),
             LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize] = data,
-            _ => panic!("Invalid PPU read {:#04x}", addr),
+            _ => panic!("Invalid PPU read ${:04x}", addr),
         }
     }
 

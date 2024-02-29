@@ -35,7 +35,7 @@ impl SerialOut {
                     self.sc = SCRegister::from_bits(data);
                 }
             }
-            _ => panic!("Invalid serial write {:#04x}", addr),
+            _ => panic!("Invalid serial write ${:04x}", addr),
         }
     }
 
@@ -43,7 +43,7 @@ impl SerialOut {
         match addr {
             SB => self.sb,
             SC => self.sc.into_bits(),
-            _ => panic!("Invalid serial write {:#04x}", addr),
+            _ => panic!("Invalid serial write ${:04x}", addr),
         }
     }
 }

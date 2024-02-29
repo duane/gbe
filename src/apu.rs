@@ -94,7 +94,7 @@ impl APU {
             NR51 => self.nr51 = NR51Register::from_bits_truncate(data),
             NR52 => self.nr52 = NR52Register::from_bits_truncate(data),
             WAVE_RAM..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM) as usize] = data,
-            _ => panic!("Invalid audio register: {:#04x}", addr),
+            _ => panic!("Invalid audio register: ${:04x}", addr),
         }
     }
 
@@ -122,7 +122,7 @@ impl APU {
             NR51 => self.nr51.bits(),
             NR52 => self.nr52.bits(),
             WAVE_RAM..=WAVE_RAM_END => self.wave_ram[(addr - WAVE_RAM) as usize],
-            _ => panic!("Invalid audio register: {:#04x}", addr),
+            _ => panic!("Invalid audio register: ${:04x}", addr),
         }
     }
 }
