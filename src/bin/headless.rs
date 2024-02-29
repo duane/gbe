@@ -92,7 +92,6 @@ fn main() -> Result<()> {
     let check_for_signal_every = 1 << 16;
 
     'step: loop {
-        println!("running: {}", running);
         if !running {
             if *should_stop.lock().unwrap() {
                 break 'step;
@@ -129,8 +128,8 @@ fn main() -> Result<()> {
                                     }
                                 } as u16;
                                 let mut buf = Vec::with_capacity(size as usize);
-                                for _ in 0..size {
-                                    let byte = read_u8!(continue 'step, machine, running, addr);
+                                for i in 0..size {
+                                    let byte = read_u8!(continue 'step, machine, running, addr + i);
                                     buf.push(byte);
                                 }
                                 let (structured, _) = gbc::instruction::Instruction::from_u8_slice(
