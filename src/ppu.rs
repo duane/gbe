@@ -6,7 +6,7 @@ use bitfield_struct::bitfield;
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
 
-use bitflags::{bitflags, Bits, Flags};
+use bitflags::bitflags;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {

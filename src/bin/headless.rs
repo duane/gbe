@@ -9,9 +9,9 @@ use signal_hook::iterator::Signals;
 use std::collections::HashSet;
 use std::io::{BufReader, Read};
 use std::str::FromStr;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::{env::args, fs::File};
-use std::{thread, time::Duration};
 
 const BUF: [u8; 0x8000] = [0x0; 0x8000];
 
