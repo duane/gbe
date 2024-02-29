@@ -14,7 +14,7 @@ fn main() -> Result<()> {
 
     let args = args().collect::<Vec<String>>();
     if args.len() > 2 {
-        println!("Usage: gbc <rom file>");
+        println!("Usage: gbc [rom file]");
         return Ok(());
     }
     let rom = if args.len() > 1 {
@@ -27,6 +27,7 @@ fn main() -> Result<()> {
         let mut reader = BufReader::new(file);
         let mut rom_file = vec![0x0; 0x8000];
         reader.read(&mut rom_file).unwrap();
+        println!("Loaded ROM: {}", args[1]);
         ROM::from_buf(rom_file)
     } else {
         ROM::from_buf(BUF.to_vec())
@@ -34,9 +35,7 @@ fn main() -> Result<()> {
     let mut machine = gbc::machine::Machine::new(rom);
     let mut breakpoints = HashSet::<u16>::new();
 
-    breakpoints.insert(0x0);
-    breakpoints.insert(0x64);
-    let mut running = true;
+    let mut running = false;
     loop {
         if !running {
             let readline = rl.readline(">> ");
@@ -50,6 +49,10 @@ fn main() -> Result<()> {
                     let cmd = tokens[0];
                     let mut args = tokens.iter().skip(1);
                     match cmd {
+                        "run" => {
+                            running = true;
+                            continue;
+                        }
                         "dis" => {
                             let addr = machine.cpu.pc;
                             let insn = machine.cpu.bus.read_u8(addr)?;
