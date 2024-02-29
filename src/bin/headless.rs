@@ -105,7 +105,7 @@ fn main() -> Result<()> {
                         continue;
                     }
                     rl.add_history_entry(trimmed).unwrap();
-                    rl.save_history(".history");
+                    rl.save_history(".history").unwrap();
                     let tokens = trimmed.split_whitespace().collect::<Vec<&str>>();
                     let cmd = tokens[0];
                     let mut args = tokens.iter().skip(1);
