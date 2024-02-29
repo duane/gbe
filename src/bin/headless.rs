@@ -15,6 +15,31 @@ fn parse_addr(addr: &str) -> u16 {
     })
 }
 
+macro_rules! on_error {
+    ( $on:stmt, $machine:expr, $running:expr, $result:expr ) => {{
+        match $result {
+            Ok(val) => val,
+            Err(err) => {
+                println!("{:04X}: {}", $machine.cpu.pc, err);
+                $running = false;
+                $on
+            }
+        }
+    }};
+}
+
+macro_rules! read_u8 {
+    ( $on:stmt, $machine:expr, $running:expr, $addr:expr ) => {{
+        on_error!($on, $machine, $running, $machine.cpu.bus.read_u8($addr))
+    }};
+}
+
+macro_rules! read_u16 {
+    ( $on:stmt, $machine:expr, $running:expr, $addr:expr ) => {{
+        on_error!($on, $machine, $running, $machine.cpu.bus.read_u16($addr))
+    }};
+}
+
 fn main() -> Result<()> {
     color_eyre::install()?;
     let mut rl = DefaultEditor::new()?;
@@ -43,7 +68,7 @@ fn main() -> Result<()> {
     let mut breakpoints = HashSet::<u16>::new();
 
     let mut running = false;
-    loop {
+    'step: loop {
         if !running {
             let readline = rl.readline(">> ");
             match readline {
@@ -66,13 +91,21 @@ fn main() -> Result<()> {
                                 Some(addr) => parse_addr(addr),
                                 None => machine.cpu.pc,
                             };
-                            for _ in 0..count {
-                                let insn = machine.cpu.bus.read_u8(addr)?;
-                                let size = gbc::instruction::Instruction::size_header(insn).unwrap()
-                                    as u16;
-                                let buf: Vec<u8> = (0..size)
-                                    .map(|i| machine.cpu.bus.read_u8(addr + i).unwrap())
-                                    .collect();
+                            'listing: for _ in 0..count {
+                                let insn = read_u8!(continue 'step, machine, running, addr);
+                                let size = match gbc::instruction::Instruction::size_header(insn) {
+                                    Ok(size) => size as u16,
+                                    Err(_) => {
+                                        println!("{:04x}: ???", addr);
+                                        addr += 1;
+                                        continue 'listing;
+                                    }
+                                } as u16;
+                                let mut buf = Vec::with_capacity(size as usize);
+                                for _ in 0..size {
+                                    let byte = read_u8!(continue 'step, machine, running, addr);
+                                    buf.push(byte);
+                                }
                                 let (structured, _) = gbc::instruction::Instruction::from_u8_slice(
                                     &buf,
                                     0,
@@ -86,13 +119,13 @@ fn main() -> Result<()> {
                         "continue" => {
                             running = true;
                             // manually execute the instruction at the breakpoint
-                            machine.step();
-                            continue;
+                            on_error!(continue 'step, machine, running, machine.step());
+                            continue 'step;
                         }
                         "step" => {
                             let steps = args.next().unwrap_or(&"1").parse::<u32>().unwrap();
                             for _ in 0..steps {
-                                machine.step();
+                                on_error!(continue 'step, machine, running, machine.step());
                             }
                         }
                         "break" => {
@@ -116,11 +149,13 @@ fn main() -> Result<()> {
                         }
                         "xb" => {
                             let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
-                            println!("${:02x}", machine.cpu.bus.read_u8(addr)?);
+                            let byte = read_u8!(continue 'step, machine, running, addr);
+                            println!("${:02x}", byte);
                         }
                         "xw" => {
                             let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
-                            println!("${:04x}", machine.cpu.bus.read_u16(addr)?);
+                            let word = read_u16!(continue 'step, machine, running, addr);
+                            println!("${:04x}", word);
                         }
                         "exit" => {
                             break;
@@ -150,7 +185,7 @@ fn main() -> Result<()> {
         }
 
         while !breakpoints.contains(&machine.cpu.pc) {
-            machine.step();
+            on_error!(continue 'step, machine, running, machine.step());
         }
         println!("Encountered breakpoint at ${:04x}", machine.cpu.pc);
         running = false;
