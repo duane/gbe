@@ -1,10 +1,12 @@
 use color_eyre::Result;
+use gbc::cpu::RegRef;
 use gbc::ioreg_addr;
 use gbc::rom::ROM;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::collections::HashSet;
 use std::io::{BufReader, Read};
+use std::str::FromStr;
 use std::{env::args, fs::File};
 
 const BUF: [u8; 0x8000] = [0x0; 0x8000];
@@ -146,6 +148,15 @@ fn main() -> Result<()> {
                         }
                         "regs" => {
                             // println!("{:?}", machine.cpu.registers);
+                        }
+                        "xr" => {
+                            let reg = on_error!(
+                                continue 'step,
+                                machine,
+                                running,
+                                RegRef::from_str(args.next().expect(&"USAGE: xr REG"))
+                            );
+                            println!("{}", machine.cpu.render_reg_val(reg));
                         }
                         "xb" => {
                             let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));

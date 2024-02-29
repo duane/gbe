@@ -1,10 +1,49 @@
 use color_eyre::Result;
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use crate::{
     bus::Bus,
     instruction::{Cond, Instruction, R16Mem, R16Stack, R16, R8},
 };
+
+pub enum RegRef {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    AF,
+    BC,
+    DE,
+    HL,
+    SP,
+    PC,
+}
+
+impl FromStr for RegRef {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> std::prelude::v1::Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "A" => Ok(RegRef::A),
+            "B" => Ok(RegRef::B),
+            "C" => Ok(RegRef::C),
+            "D" => Ok(RegRef::D),
+            "E" => Ok(RegRef::E),
+            "H" => Ok(RegRef::H),
+            "L" => Ok(RegRef::L),
+            "AF" => Ok(RegRef::AF),
+            "BC" => Ok(RegRef::BC),
+            "DE" => Ok(RegRef::DE),
+            "HL" => Ok(RegRef::HL),
+            "SP" => Ok(RegRef::SP),
+            "PC" => Ok(RegRef::PC),
+            _ => Err("Invalid register"),
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct AFRegisterPair {
@@ -115,6 +154,33 @@ impl CPU {
             locked: false,
             ime: false,
             bus,
+        }
+    }
+
+    pub fn render_reg_val(&self, reg_ref: RegRef) -> String {
+        unsafe {
+            let flags = format!(
+                "Z{}N{}H{}C{}",
+                self.af.single.f >> 7,
+                (self.af.single.f >> 6) & 1,
+                (self.af.single.f >> 5) & 1,
+                (self.af.single.f >> 4) & 1
+            );
+            match reg_ref {
+                RegRef::A => format!("{} ${1:02x} ({1:})", flags, self.af.single.a),
+                RegRef::B => format!("{} ${1:02x} ({1:})", flags, self.bc.single.b),
+                RegRef::C => format!("{} ${1:02x} ({1:})", flags, self.bc.single.c),
+                RegRef::D => format!("{} ${1:02x} ({1:})", flags, self.de.single.d),
+                RegRef::E => format!("{} ${1:02x} ({1:})", flags, self.de.single.e),
+                RegRef::H => format!("{} ${1:02x} ({1:})", flags, self.hl.single.h),
+                RegRef::L => format!("{} ${1:02x} ({1:})", flags, self.hl.single.l),
+                RegRef::AF => format!("{} ${1:04x} ({1:})", flags, self.af.af),
+                RegRef::BC => format!("{} ${1:04x} ({1:})", flags, self.bc.bc),
+                RegRef::DE => format!("{} ${1:04x} ({1:})", flags, self.de.de),
+                RegRef::HL => format!("{} ${1:04x} ({1:})", flags, self.hl.hl),
+                RegRef::SP => format!("{} ${1:04x} ({1:})", flags, self.sp),
+                RegRef::PC => format!("{} ${1:04x} ({1:})", flags, self.pc),
+            }
         }
     }
 
@@ -1064,10 +1130,10 @@ impl CPU {
         }
 
         if action_taken {
-            self.m = self.m.wrapping_add(decoded.t_cycles().0 as u16);
+            self.m = self.m.wrapping_add(decoded.m_cycles().0 as u16);
             self.t = self.t.wrapping_add(decoded.t_cycles().0 as u16);
         } else {
-            self.m = self.m.wrapping_add(decoded.t_cycles().1 as u16);
+            self.m = self.m.wrapping_add(decoded.m_cycles().1 as u16);
             self.t = self.t.wrapping_add(decoded.t_cycles().1 as u16);
         }
         Ok(())
