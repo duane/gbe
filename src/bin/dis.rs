@@ -27,23 +27,8 @@ fn main() {
 
     let mut addr = 0;
     while addr < bytes.len() as u16 {
-        let size = match Instruction::size_header(bytes[addr as usize]) {
-            Ok(size) => size as usize,
-            Err(InstructionError::Unknown(_)) => {
-                println!("{:#04x}:\tUnknown({:#02x})", addr, bytes[addr as usize]);
-                addr += 1;
-                continue;
-            }
-            Err(InstructionError::Illegal(_)) => {
-                println!("{:#04x}:\tIllegal({:#02x})", addr, bytes[addr as usize]);
-                addr += 1;
-                continue;
-            }
-            Err(InstructionError::Incomplete(_)) => unreachable!(),
-        };
-        match Instruction::from_u8_slice(&bytes, addr, size) {
+        match Instruction::from_u8_slice(&bytes, addr) {
             Ok((insn, size)) => {
-                assert!(size == insn.size(), "Size mismatch");
                 println!("{:#04x}:\t{}", addr, insn);
                 addr += size as u16;
             }

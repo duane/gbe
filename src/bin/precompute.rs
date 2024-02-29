@@ -37,7 +37,7 @@ fn main() {
 
         let size = Instruction::size_header(insn).unwrap();
         buf[0] = insn;
-        let (structured, _) = Instruction::from_u8_slice(&buf, 0, size as usize).unwrap();
+        let (structured, _) = Instruction::from_u8_slice(&buf, 0).unwrap();
         let output_str = sanitize(format!("Instruction::{:?}", structured).as_str());
         println!("{} => {:#02x},", output_str, insn);
     }
@@ -45,7 +45,7 @@ fn main() {
     println!("");
     for insn in 0..=u8::MAX {
         let buf = [0xCB, insn];
-        let (structured, _) = Instruction::from_u8_slice(&buf, 0, 2 as usize).unwrap();
+        let (structured, _) = Instruction::from_u8_slice(&buf, 0).unwrap();
         let output_str = sanitize(format!("Instruction::{:?}", structured).as_str());
         println!("{} => {:#02x},", output_str, insn);
         // println!("({},{}),", structured.t_cycles().0, structured.t_cycles().1);

@@ -79,7 +79,7 @@ impl Bus {
                     Ok(self.apu.read(addr))
                 }
                 LCDC | SCY | SCX | LY | LYC | STAT => Ok(self.ppu.read(addr)),
-                IE => Err(BusError::InvalidRead("INTERRUPT REGISTER".into(), addr).into()),
+                IE => Ok(0),
                 _ => Err(
                     BusError::InvalidRead(format!("IO REGISTER {}", ioreg_name(addr)), addr).into(),
                 ),
@@ -111,24 +111,49 @@ impl Bus {
                     Err(BusError::InvalidWrite("TIMER COUNTER REGISTER".into(), addr, data).into())
                 } // Divider Register
                 TIM => {
-                    Err(BusError::InvalidWrite("TIMER MODULO REGISTER".into(), addr, data).into())
+                    println!("Writing ${:02x} to TIM", data);
+                    Ok(())
                 } // Divider Register
                 TAC => {
-                    Err(BusError::InvalidWrite("TIMER CONTROL REGISTER".into(), addr, data).into())
+                    println!("Writing ${:02x} to TAC", data);
+                    Ok(())
                 } // Divider Register
                 IF => {
-                    Err(BusError::InvalidWrite("INTERRUPT FLAG REGISTER".into(), addr, data).into())
+                    println!("Writing ${:02x} to IF", data);
+                    Ok(())
                 } // Divider Register
 
                 NR10..=NR14 | NR21..=NR34 | NR41..=NR52 | WAVE_RAM..=WAVE_RAM_END => {
                     Ok(self.apu.write(addr, data))
                 }
                 LCDC | BGP | SCY | SCX | LYC | STAT => Ok(self.ppu.write(addr, data)),
-                IE => Err(BusError::InvalidWrite("INTERRUPT REGISTER".into(), addr, data).into()),
+
+                WX => {
+                    println!("Writing ${:02x} to WX", data);
+                    Ok(())
+                }
+                WY => {
+                    println!("Writing ${:02x} to WX", data);
+                    Ok(())
+                }
+
+                OBP0 => {
+                    println!("Writing ${:02x} to OBP0", data);
+                    Ok(())
+                }
+                OBP1 => {
+                    println!("Writing ${:02x} to OBP1", data);
+                    Ok(())
+                }
+
+                IE => {
+                    println!("Writing ${:02x} to IE", data);
+                    Ok(())
+                }
 
                 // undocumented
                 BOOT_ROM_ENABLE => Ok(if self.boot_rom_enabled {
-                    self.boot_rom_enabled = data != 0;
+                    self.boot_rom_enabled = data == 0;
                 }),
                 _ => Err(BusError::InvalidWrite(
                     format!("IO REGISTER {}", ioreg_name(addr)),

@@ -131,16 +131,13 @@ fn main() -> Result<()> {
                                     }
                                 } as u16;
                                 let mut buf = Vec::with_capacity(size as usize);
-                                for i in 0..size {
+                                buf.push(insn);
+                                for i in 1..size {
                                     let byte = read_u8!(continue 'step, machine, running, addr + i);
                                     buf.push(byte);
                                 }
-                                let (structured, _) = gbc::instruction::Instruction::from_u8_slice(
-                                    &buf,
-                                    0,
-                                    size as usize,
-                                )
-                                .unwrap();
+                                let (structured, _) =
+                                    gbc::instruction::Instruction::from_u8_slice(&buf, 0).unwrap();
                                 println!("{:04x}: {}", addr, structured);
                                 addr += size;
                             }
@@ -180,9 +177,6 @@ fn main() -> Result<()> {
                         }
                         "pc" => {
                             println!("${:04x}", machine.cpu.pc);
-                        }
-                        "regs" => {
-                            // println!("{:?}", machine.cpu.registers);
                         }
                         "reset" => machine.reset().unwrap(),
                         "xr" => match args.next() {

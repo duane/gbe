@@ -1149,7 +1149,7 @@ impl CPU {
             buf[i + 1] = self.bus.read_u8(self.pc)?;
             self.pc += 1;
         }
-        let (decoded, bytes_consumed) = Instruction::from_u8_slice(buf.as_slice(), 0, size)?;
+        let (decoded, bytes_consumed) = Instruction::from_u8_slice(buf.as_slice(), 0)?;
         assert!(
             bytes_consumed as usize == buf.len(),
             "differing expectations of instruction size: {} vs {}, bytes: {:02x?}",
@@ -1209,7 +1209,6 @@ mod tests {
             let mut machine = Machine::new(ROM::from_buf(VALID_BUT_EMPTY_ROM.to_vec()));
             while machine.cpu.pc != 0x100 {
                 machine.step().unwrap();
-                // println!("pc: ${:02x}", machine.cpu.pc);
             }
 
             assert_eq!(machine.cpu.bc.bc, 0x0013);

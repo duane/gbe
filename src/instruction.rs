@@ -451,19 +451,19 @@ impl Display for Instruction {
             Instruction::Halt => write!(f, "halt"),
             Instruction::StopN8(val) => write!(f, "stop ${:02x}", val),
 
-            Instruction::LoadR16N16(r16, imm16) => write!(f, "ld {}, {}", r16, imm16),
+            Instruction::LoadR16N16(r16, imm16) => write!(f, "ld {}, ${:04x}", r16, imm16),
             Instruction::LoadAR16Mem(r16mem) => write!(f, "ld a, {}", r16mem.ref_operand()),
-            Instruction::LoadAA16(imm16) => write!(f, "ld a, [{}]", imm16),
-            Instruction::LoadR8N8(r8, imm8) => write!(f, "ld {}, {}", r8, imm8),
+            Instruction::LoadAA16(imm16) => write!(f, "ld a, [${:04x}]", imm16),
+            Instruction::LoadR8N8(r8, imm8) => write!(f, "ld {}, ${:02x}", r8, imm8),
             Instruction::LoadR8R8(r8_dst, r8_src) => write!(f, "ld {}, {}", r8_dst, r8_src),
             Instruction::LoadACH => write!(f, "ldh a, [c]"),
             Instruction::LoadAA8H(imm8) => write!(f, "ldh a, [${:02x}]", imm8),
 
-            Instruction::StoreAA16(imm16) => write!(f, "ld [{}], A", imm16),
+            Instruction::StoreAA16(imm16) => write!(f, "ld [${:04x}], A", imm16),
             Instruction::StoreACH => write!(f, "ldh [c], a"),
             Instruction::StoreAR16Mem(r16mem) => write!(f, "ld {}, a", r16mem.ref_operand()),
             Instruction::StoreAA8H(imm8) => write!(f, "ldh [${:02x}], a", imm8),
-            Instruction::StoreSPA16(imm16) => write!(f, "ld [{}], sp", imm16),
+            Instruction::StoreSPA16(imm16) => write!(f, "ld [${:04x}], sp", imm16),
 
             Instruction::PushR16Stack(operand) => write!(f, "push {}", operand),
             Instruction::PopR16Stack(operand) => write!(f, "pop {}", operand),
@@ -485,19 +485,19 @@ impl Display for Instruction {
             Instruction::AdcAN8(n8) => write!(f, "adc a, {}", n8),
             Instruction::SubAN8(n8) => write!(f, "sub a, {}", n8),
             Instruction::SbcAN8(n8) => write!(f, "sbc a, {}", n8),
-            Instruction::AndAN8(n8) => write!(f, "and A, {}", n8),
-            Instruction::XorAN8(n8) => write!(f, "xor A, {}", n8),
-            Instruction::OrAN8(n8) => write!(f, "or A, {}", n8),
-            Instruction::CpAN8(n8) => write!(f, "cp A, {}", n8),
+            Instruction::AndAN8(n8) => write!(f, "and a, {}", n8),
+            Instruction::XorAN8(n8) => write!(f, "xor a, {}", n8),
+            Instruction::OrAN8(n8) => write!(f, "or a, {}", n8),
+            Instruction::CpAN8(n8) => write!(f, "cp a, {}", n8),
 
             Instruction::AddR8(source) => write!(f, "add a, {}", source),
             Instruction::AdcR8(source) => write!(f, "adc a, {}", source),
             Instruction::SubR8(source) => write!(f, "sub a, {}", source),
             Instruction::SbcR8(source) => write!(f, "sbc a, {}", source),
-            Instruction::AndR8(source) => write!(f, "and A, {}", source),
-            Instruction::XorR8(source) => write!(f, "xor A, {}", source),
-            Instruction::OrR8(source) => write!(f, "or A, {}", source),
-            Instruction::CpR8(source) => write!(f, "cp A, {}", source),
+            Instruction::AndR8(source) => write!(f, "and a, {}", source),
+            Instruction::XorR8(source) => write!(f, "xor a, {}", source),
+            Instruction::OrR8(source) => write!(f, "or a, {}", source),
+            Instruction::CpR8(source) => write!(f, "cp a, {}", source),
 
             Instruction::RlcA => write!(f, "rlc a"),
             Instruction::RrcA => write!(f, "rrc a"),
@@ -815,13 +815,13 @@ impl Instruction {
         }
     }
 
-    fn read_u8_helper(buf: &[u8], addr: u16) -> u8 {
-        buf[addr as usize]
+    fn read_u8_helper(buf: &[u8], addr: usize) -> u8 {
+        buf[addr]
     }
 
-    fn read_u16_helper(buf: &[u8], addr: u16) -> u16 {
-        let lo = buf[addr as usize];
-        let hi = buf[(addr + 1) as usize];
+    fn read_u16_helper(buf: &[u8], addr: usize) -> u16 {
+        let lo = buf[addr];
+        let hi = buf[(addr + 1)];
         ((hi as u16) << 8) | (lo as u16)
     }
 
@@ -1332,15 +1332,15 @@ impl Instruction {
         }
     }
 
-    pub fn from_u8_slice(
-        buf: &[u8],
-        addr: u16,
-        _unused: usize,
-    ) -> Result<(Instruction, u8), InstructionError> {
-        let size = OPCODE_SIZE_LOOKUP[buf[0] as usize];
-        let insn = buf[0];
+    pub fn from_u8_slice(buf: &[u8], addr: u16) -> Result<(Instruction, u8), InstructionError> {
+        let addr = addr as usize;
+        let size = OPCODE_SIZE_LOOKUP[buf[addr] as usize] as usize;
+        let insn = buf[addr as usize];
         if size == 0 {
             return Err(InstructionError::Illegal(buf[0]).into());
+        }
+        if addr + size > buf.len() {
+            return Err(InstructionError::Incomplete(buf[addr as usize..].to_vec()).into());
         }
         let insn = match insn {
             0x0 => Instruction::Nop,
@@ -1857,7 +1857,7 @@ impl Instruction {
                 unreachable!()
             }
         };
-        Ok((insn, size))
+        Ok((insn, size as u8))
     }
 }
 
@@ -1891,130 +1891,130 @@ mod tests {
 
         assert_eq!(Instruction::size_header(0x7).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x7], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x7], 0).unwrap(),
             (Instruction::RlcA, 1)
         );
         assert_eq!(Instruction::size_header(0xF).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xF], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xF], 0).unwrap(),
             (Instruction::RrcA, 1)
         );
         assert_eq!(Instruction::size_header(0x17).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x17], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x17], 0).unwrap(),
             (Instruction::RlA, 1)
         );
         assert_eq!(Instruction::size_header(0x1F).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x1F], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x1F], 0).unwrap(),
             (Instruction::RrA, 1)
         );
         assert_eq!(Instruction::size_header(0x27).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x27], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x27], 0).unwrap(),
             (Instruction::Daa, 1)
         );
         assert_eq!(Instruction::size_header(0x2F).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x2F], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x2F], 0).unwrap(),
             (Instruction::Cpl, 1)
         );
         assert_eq!(Instruction::size_header(0x37).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x37], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x37], 0).unwrap(),
             (Instruction::Scf, 1)
         );
         assert_eq!(Instruction::size_header(0x3F).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x3F], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x3F], 0).unwrap(),
             (Instruction::Ccf, 1)
         );
 
         assert_eq!(Instruction::size_header(0x9).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x9], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x9], 0).unwrap(),
             (Instruction::AddHLR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x1).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x1, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0x1, 0x34, 0x12], 0).unwrap(),
             (Instruction::LoadR16N16(R16::R16BC, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x2).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x2], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x2], 0).unwrap(),
             (Instruction::StoreAR16Mem(R16Mem::R16MemBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xa).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xa], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xa], 0).unwrap(),
             (Instruction::LoadAR16Mem(R16Mem::R16MemBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x8).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x8, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0x8, 0x34, 0x12], 0).unwrap(),
             (Instruction::StoreSPA16(0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x3], 0).unwrap(),
             (Instruction::IncR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xb).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xb], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xb], 0).unwrap(),
             (Instruction::DecR16(R16::R16BC), 1)
         );
 
         assert_eq!(Instruction::size_header(0x4).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x4], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x4], 0).unwrap(),
             (Instruction::IncR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x5).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x5], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x5], 0).unwrap(),
             (Instruction::DecR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x6).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x6, 0x34], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0x6, 0x34], 0).unwrap(),
             (Instruction::LoadR8N8(R8::R8B, 0x34), 2)
         );
 
         assert_eq!(Instruction::size_header(0x18).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x18, 0x34], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0x18, 0x34], 0).unwrap(),
             (Instruction::JumpNear(0x34), 2)
         );
         assert_eq!(Instruction::size_header(0x38).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x38, 0x34], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0x38, 0x34], 0).unwrap(),
             (Instruction::JumpNearCond(Cond::CondC, 0x34), 2)
         );
 
         assert_eq!(Instruction::size_header(0xC3).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0).unwrap(),
             (Instruction::JumpFar(0x1234), 3)
         );
         assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0).unwrap(),
             (Instruction::JumpFarCond(Cond::CondZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x10, 0x34], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0x10, 0x34], 0).unwrap(),
             (Instruction::StopN8(0x34), 2)
         );
     }
@@ -2023,13 +2023,13 @@ mod tests {
     fn block1() {
         assert_eq!(Instruction::size_header(0x40).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x40], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x40], 0).unwrap(),
             (Instruction::LoadR8R8(R8::R8B, R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x76).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x76], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x76], 0).unwrap(),
             (Instruction::Halt, 1)
         );
     }
@@ -2038,43 +2038,43 @@ mod tests {
     fn block2() {
         assert_eq!(Instruction::size_header(0x10 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x10 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x10 << 3], 0).unwrap(),
             (Instruction::AddR8(R8::R8B), 1)
         );
 
         assert_eq!(Instruction::size_header(0x11 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x11 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x11 << 3], 0).unwrap(),
             (Instruction::AdcR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x12 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x12 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x12 << 3], 0).unwrap(),
             (Instruction::SubR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x13 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x13 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x13 << 3], 0).unwrap(),
             (Instruction::SbcR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x14 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x14 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x14 << 3], 0).unwrap(),
             (Instruction::AndR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x15 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x15 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x15 << 3], 0).unwrap(),
             (Instruction::XorR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x16 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x16 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x16 << 3], 0).unwrap(),
             (Instruction::OrR8(R8::R8B), 1)
         );
         assert_eq!(Instruction::size_header(0x17 << 3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0x17 << 3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0x17 << 3], 0).unwrap(),
             (Instruction::CpR8(R8::R8B), 1)
         );
     }
@@ -2083,162 +2083,162 @@ mod tests {
     fn block3() {
         assert_eq!(Instruction::size_header(0xC6).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xC6, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xC6, 0x12], 0).unwrap(),
             (Instruction::AddAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xCE).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCE, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCE, 0x12], 0).unwrap(),
             (Instruction::AdcAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xD6).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xD6, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xD6, 0x12], 0).unwrap(),
             (Instruction::SubAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xDE).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xDE, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xDE, 0x12], 0).unwrap(),
             (Instruction::SbcAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xE6).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xE6, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xE6, 0x12], 0).unwrap(),
             (Instruction::AndAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xEE).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xEE, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xEE, 0x12], 0).unwrap(),
             (Instruction::XorAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xF6).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xF6, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xF6, 0x12], 0).unwrap(),
             (Instruction::OrAN8(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xFE).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xFE, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xFE, 0x12], 0).unwrap(),
             (Instruction::CpAN8(0x12), 2)
         );
 
         assert_eq!(Instruction::size_header(0xD9).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xD9], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xD9], 0).unwrap(),
             (Instruction::Reti, 1)
         );
         assert_eq!(Instruction::size_header(0xF3).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xF3], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xF3], 0).unwrap(),
             (Instruction::Di, 1)
         );
         assert_eq!(Instruction::size_header(0xFB).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xFb], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xFb], 0).unwrap(),
             (Instruction::Ei, 1)
         );
 
         assert_eq!(Instruction::size_header(0xc9).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xc9], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xc9], 0).unwrap(),
             (Instruction::Ret, 1)
         );
         assert_eq!(Instruction::size_header(0xc0).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xc0], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xc0], 0).unwrap(),
             (Instruction::RetCond(Cond::CondNZ), 1)
         );
 
         assert_eq!(Instruction::size_header(0xdf).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xdf], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xdf], 0).unwrap(),
             (Instruction::Rst(Tgt3::T3), 1)
         );
 
         assert_eq!(Instruction::size_header(0xcd).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xcd, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xcd, 0x34, 0x12], 0).unwrap(),
             (Instruction::CallA16(0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xc4).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xc4, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xc4, 0x34, 0x12], 0).unwrap(),
             (Instruction::CallCondA16(Cond::CondNZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xc1).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xc1], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xc1], 0).unwrap(),
             (Instruction::PopR16Stack(R16Stack::R16StackBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xc5).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xc5], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xc5], 0).unwrap(),
             (Instruction::PushR16Stack(R16Stack::R16StackBC), 1)
         );
 
         assert_eq!(Instruction::size_header(0xe2).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xe2], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xe2], 0).unwrap(),
             (Instruction::StoreACH, 1)
         );
 
         assert_eq!(Instruction::size_header(0xe0).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xe0, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xe0, 0x12], 0).unwrap(),
             (Instruction::StoreAA8H(0x12), 2)
         );
 
         assert_eq!(Instruction::size_header(0xea).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xea, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xea, 0x34, 0x12], 0).unwrap(),
             (Instruction::StoreAA16(0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xf2).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xf2], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xf2], 0).unwrap(),
             (Instruction::LoadACH, 1)
         );
         assert_eq!(Instruction::size_header(0xf0).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xf0, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xf0, 0x12], 0).unwrap(),
             (Instruction::LoadAA8H(0x12), 2)
         );
         assert_eq!(Instruction::size_header(0xfa).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xfa, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xfa, 0x34, 0x12], 0).unwrap(),
             (Instruction::LoadAA16(0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xC3).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xC3, 0x34, 0x12], 0).unwrap(),
             (Instruction::JumpFar(0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xCA).unwrap(), 3);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0, 3).unwrap(),
+            Instruction::from_u8_slice(&[0xCA, 0x34, 0x12], 0).unwrap(),
             (Instruction::JumpFarCond(Cond::CondZ, 0x1234), 3)
         );
 
         assert_eq!(Instruction::size_header(0xF8).unwrap(), 2);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xF8, 0x12], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xF8, 0x12], 0).unwrap(),
             (Instruction::LoadHLSPN8(0x12), 2)
         );
 
         assert_eq!(Instruction::size_header(0xE9).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xE9], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xE9], 0).unwrap(),
             (Instruction::JumpFarHL, 1)
         );
         assert_eq!(Instruction::size_header(0xF9).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xF9], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xF9], 0).unwrap(),
             (Instruction::LoadHLSP, 1)
         );
     }
@@ -2248,48 +2248,48 @@ mod tests {
         assert_eq!(Instruction::size_header(0xCB).unwrap(), 2);
 
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x00], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x00], 0).unwrap(),
             (Instruction::Rlc(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x08], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x08], 0).unwrap(),
             (Instruction::Rrc(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x10], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x10], 0).unwrap(),
             (Instruction::Rl(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x18], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x18], 0).unwrap(),
             (Instruction::Rr(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x20], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x20], 0).unwrap(),
             (Instruction::Sla(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x28], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x28], 0).unwrap(),
             (Instruction::Sra(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x30], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x30], 0).unwrap(),
             (Instruction::Swap(R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x38], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x38], 0).unwrap(),
             (Instruction::Srl(R8::R8B), 2)
         );
 
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x40], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x40], 0).unwrap(),
             (Instruction::Bit(BitRef::B0, R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0x80], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0x80], 0).unwrap(),
             (Instruction::Res(BitRef::B0, R8::R8B), 2)
         );
         assert_eq!(
-            Instruction::from_u8_slice(&[0xCB, 0xC0], 0, 2).unwrap(),
+            Instruction::from_u8_slice(&[0xCB, 0xC0], 0).unwrap(),
             (Instruction::Set(BitRef::B0, R8::R8B), 2)
         );
     }
@@ -2299,7 +2299,7 @@ mod tests {
     fn decode_bc_store() {
         assert_eq!(Instruction::size_header(0x2).unwrap(), 1);
         let buf = [0x2];
-        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0).unwrap();
         assert_eq!(size, 1);
         assert_eq!(insn, Instruction::StoreAR16Mem(R16Mem::R16MemBC));
         let encoded = insn.encode();
@@ -2310,7 +2310,7 @@ mod tests {
     fn dec_b() {
         assert_eq!(Instruction::size_header(0x5).unwrap(), 1);
         let buf = [0x5];
-        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0).unwrap();
         assert_eq!(size, 1);
         assert_eq!(insn, Instruction::DecR8(R8::R8B));
         let encoded = insn.encode();
@@ -2321,7 +2321,7 @@ mod tests {
     fn load_from_bc_ref() {
         assert_eq!(Instruction::size_header(0xa).unwrap(), 1);
         let buf = [0xa];
-        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 1).unwrap();
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0).unwrap();
         assert_eq!(size, 1);
         assert_eq!(insn, Instruction::LoadAR16Mem(R16Mem::R16MemBC));
         let encoded = insn.encode();
@@ -2332,7 +2332,7 @@ mod tests {
     fn stop() {
         assert_eq!(Instruction::size_header(0x10).unwrap(), 2);
         let buf = [0x10, 0x34];
-        let (insn, size) = Instruction::from_u8_slice(&buf, 0, 2).unwrap();
+        let (insn, size) = Instruction::from_u8_slice(&buf, 0).unwrap();
         assert_eq!(size, 2);
         assert_eq!(insn, Instruction::StopN8(0x34));
         let encoded = insn.encode();
@@ -2343,7 +2343,7 @@ mod tests {
     fn xor_b() {
         assert_eq!(Instruction::size_header(0xa8).unwrap(), 1);
         assert_eq!(
-            Instruction::from_u8_slice(&[0xa8], 0, 1).unwrap(),
+            Instruction::from_u8_slice(&[0xa8], 0).unwrap(),
             (Instruction::XorR8(R8::R8B), 1)
         );
     }
@@ -2357,12 +2357,12 @@ mod tests {
             }
             let size = Instruction::size_header(opcode).unwrap() as usize;
             let buf = &[opcode, payload[0], payload[1]][..size];
-            let (insn, _) = Instruction::from_u8_slice(buf, 0, size).unwrap();
+            let (insn, _) = Instruction::from_u8_slice(buf, 0).unwrap();
             let encoded = insn.encode();
             assert_eq!(encoded, buf);
         }
         for opcode in 0..=0xFF {
-            let (insn, _) = Instruction::from_u8_slice(&[0xCB, opcode], 0, 2).unwrap();
+            let (insn, _) = Instruction::from_u8_slice(&[0xCB, opcode], 0).unwrap();
             let encoded = insn.encode();
             assert_eq!(encoded, [0xCB, opcode]);
         }
