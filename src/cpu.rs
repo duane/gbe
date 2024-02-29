@@ -95,13 +95,12 @@ pub struct CPU {
     pub locked: bool,
     pub ime: bool,
 
-    bus: Bus,
+    pub bus: Bus,
 }
 
 impl CPU {
     pub fn new(bus: Bus) -> Self {
         Self {
-            bus,
             af: AFRegister::default(),
             bc: BCRegister::default(),
             de: DERegister::default(),
@@ -115,6 +114,7 @@ impl CPU {
             halted: false,
             locked: false,
             ime: false,
+            bus,
         }
     }
 
