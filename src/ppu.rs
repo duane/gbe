@@ -6,7 +6,7 @@ use bitfield_struct::bitfield;
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
 
-use bitflags::bitflags;
+use bitflags::{bitflags, Bits, Flags};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {
@@ -56,6 +56,11 @@ pub struct PPU {
     pub dot_counter: usize,
     pub lcdc: LCDControl,
     pub bgp: BGPRegister,
+    pub scy: u8,
+    pub scx: u8,
+    pub ly: u8,
+    pub lyc: u8,
+    pub stat: STATRegister,
 }
 
 impl PPU {
@@ -66,6 +71,11 @@ impl PPU {
             dot_counter: 0,
             lcdc: LCDControl::empty(),
             bgp: BGPRegister::default(),
+            scy: 0,
+            scx: 0,
+            ly: 0,
+            lyc: 0,
+            stat: STATRegister::default(),
         }
     }
 
@@ -78,10 +88,16 @@ impl PPU {
         self.scy = 0;
         self.scx = 0;
     }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             BGP => self.bgp.into_bits(),
             LCDC => self.lcdc.bits(),
+            SCY => self.scy,
+            SCX => self.scx,
+            LY => self.ly,
+            LYC => self.lyc,
+            STAT => self.stat.into_bits(),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize],
             _ => panic!("Invalid PPU read ${:04x}", addr),
         }
@@ -91,6 +107,10 @@ impl PPU {
         match addr {
             BGP => self.bgp = BGPRegister::from_bits(data),
             LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
+            SCY => self.scy = data,
+            SCX => self.scx = data,
+            LYC => self.lyc = data,
+            STAT => self.stat = STATRegister::from_bits(data & 0xf8 | self.stat.into_bits() & 0x7),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize] = data,
             _ => panic!("Invalid PPU read ${:04x}", addr),
         }
@@ -116,4 +136,47 @@ pub struct BGPRegister {
     pub id1: usize,
     #[bits(2)]
     pub id0: usize,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PPUMode {
+    HBlank = 0,
+    VBlank = 1,
+    OAMScan = 2,
+    Draw = 3,
+}
+
+impl PPUMode {
+    // This has to be a const fn
+    const fn into_bits(self) -> u8 {
+        self as _
+    }
+    const fn from_bits(value: u8) -> Self {
+        match value {
+            1 => Self::VBlank,
+            2 => Self::OAMScan,
+            3 => Self::Draw,
+            _ => Self::HBlank,
+        }
+    }
+}
+
+#[bitfield(u8)]
+#[derive(PartialEq, Eq, Hash)]
+pub struct STATRegister {
+    #[bits(1)]
+    pub _unused: bool,
+    #[bits(1)]
+    pub lyc_select: bool,
+    #[bits(1)]
+    pub mode_2: bool,
+    #[bits(1)]
+    pub mode_1: bool,
+    #[bits(1)]
+    pub mode_0: bool,
+    #[bits(1)]
+    pub ly_eq_lyc: bool,
+    #[bits(2, default = PPUMode::HBlank, from = PPUMode::from_bits)]
+    pub ppu_mode: PPUMode,
 }

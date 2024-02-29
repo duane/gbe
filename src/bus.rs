@@ -68,7 +68,7 @@ impl Bus {
                 NR10..=NR14 | NR21..=NR34 | NR41..=NR52 | WAVE_RAM..=WAVE_RAM_END => {
                     Ok(self.apu.read(addr))
                 }
-                LCDC => Ok(self.ppu.read(addr)),
+                LCDC | SCY | SCX | LY | LYC | STAT => Ok(self.ppu.read(addr)),
                 IE => Err(BusError::InvalidRead("INTERRUPT REGISTER".into(), addr).into()),
                 _ => Err(
                     BusError::InvalidRead(format!("IO REGISTER {}", ioreg_name(addr)), addr).into(),
@@ -113,7 +113,7 @@ impl Bus {
                 NR10..=NR14 | NR21..=NR34 | NR41..=NR52 | WAVE_RAM..=WAVE_RAM_END => {
                     Ok(self.apu.write(addr, data))
                 }
-                LCDC | BGP => Ok(self.ppu.write(addr, data)),
+                LCDC | BGP | SCY | SCX | LYC | STAT => Ok(self.ppu.write(addr, data)),
                 IE => Err(BusError::InvalidWrite("INTERRUPT REGISTER".into(), addr, data).into()),
                 _ => Err(BusError::InvalidWrite(
                     format!("IO REGISTER {}", ioreg_name(addr)),
