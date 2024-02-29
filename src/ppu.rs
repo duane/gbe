@@ -1,5 +1,4 @@
 #[cfg(feature = "gfx")]
-pub mod screen;
 use std::fmt::{Display, Formatter};
 
 use crate::mem_layout::*;
@@ -8,6 +7,8 @@ use color_eyre::Result;
 
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
+pub const FPS: f64 = 59.72750056960583;
+pub const UPDATES_PER_SECOND: f64 = 0.016742706298828125;
 pub const WIDTH: usize = 160;
 pub const HEIGHT: usize = 144;
 
@@ -70,7 +71,7 @@ pub struct PPU {
     lx: u8,
     pub stat: STATRegister,
 
-    frame: [RgbPixel; WIDTH * HEIGHT],
+    pub frame: [u8; WIDTH * HEIGHT * 4],
 }
 
 impl PPU {
@@ -89,11 +90,7 @@ impl PPU {
             lyc: 0,
             lx: 0,
             stat: STATRegister::default(),
-            frame: [RgbPixel {
-                r: u8::MAX,
-                g: u8::MAX,
-                b: u8::MAX,
-            }; WIDTH * HEIGHT],
+            frame: [255; WIDTH * HEIGHT * 4],
         }
     }
 
@@ -110,11 +107,7 @@ impl PPU {
         self.ly = 0;
         self.lyc = 0;
         self.stat = STATRegister::default();
-        self.frame = [RgbPixel {
-            r: u8::MAX,
-            g: u8::MAX,
-            b: u8::MAX,
-        }; WIDTH * HEIGHT];
+        self.frame = [255; WIDTH * HEIGHT * 4];
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -231,25 +224,15 @@ impl PPU {
         let bit = 1 << (7 - tile_x);
         let color_num = ((msb & bit) >> (7 - tile_x)) << 1 | ((lsb & bit) >> (7 - tile_x));
         let color = match color_num {
-            0b00 => RgbPixel {
-                r: 255,
-                g: 255,
-                b: 255,
-            },
-            0b01 => RgbPixel {
-                r: 192,
-                g: 192,
-                b: 192,
-            },
-            0b10 => RgbPixel {
-                r: 96,
-                g: 96,
-                b: 96,
-            },
-            0b11 => RgbPixel { r: 0, g: 0, b: 0 },
+            0b00 => &[255, 255, 255, 255],
+            0b01 => &[192, 192, 192, 255],
+            0b10 => &[96, 96, 96, 255],
+            0b11 => &[0, 0, 0, 255],
             _ => panic!("Invalid color number {}", color_num),
         };
-        self.frame[self.ly as usize * WIDTH + self.lx as usize] = color;
+        let start_idx = (self.ly as usize * WIDTH + self.lx as usize) * 4;
+        let end_idx = start_idx + 4;
+        self.frame[start_idx..end_idx].copy_from_slice(color);
         1
     }
 
@@ -266,9 +249,9 @@ impl PPU {
                     x as u32,
                     y as u32,
                     Rgb([
-                        self.frame[y * WIDTH + x].r,
-                        self.frame[y * WIDTH + x].g,
-                        self.frame[y * WIDTH + x].b,
+                        self.frame[(y * WIDTH + x) * 4],
+                        self.frame[(y * WIDTH + x) * 4 + 1],
+                        self.frame[(y * WIDTH + x) * 4 + 2],
                     ]),
                 );
             }
@@ -340,11 +323,4 @@ impl Display for PPUMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct RgbPixel {
-    r: u8,
-    g: u8,
-    b: u8,
 }

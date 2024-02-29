@@ -17,6 +17,14 @@ impl Machine {
         self.cpu.execute_single_instruction()
     }
 
+    pub fn step_frame(&mut self) -> Result<()> {
+        let cur_frame = self.cpu.bus.ppu.frame_count;
+        while self.cpu.bus.ppu.frame_count == cur_frame {
+            self.step()?;
+        }
+        Ok(())
+    }
+
     pub fn reset(&mut self) -> Result<()> {
         self.cpu.reset();
         Ok(())
