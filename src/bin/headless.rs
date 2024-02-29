@@ -49,6 +49,7 @@ macro_rules! read_u16 {
 fn main() -> Result<()> {
     color_eyre::install()?;
     let mut rl = DefaultEditor::new()?;
+    let _ = rl.load_history(".history");
 
     let args = args().collect::<Vec<String>>();
     if args.len() > 2 {
@@ -103,6 +104,8 @@ fn main() -> Result<()> {
                     if trimmed.is_empty() {
                         continue;
                     }
+                    rl.add_history_entry(trimmed).unwrap();
+                    rl.save_history(".history");
                     let tokens = trimmed.split_whitespace().collect::<Vec<&str>>();
                     let cmd = tokens[0];
                     let mut args = tokens.iter().skip(1);
