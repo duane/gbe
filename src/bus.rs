@@ -54,9 +54,8 @@ impl Bus {
             ROMX..=ROMX_END => Err(BusError::InvalidRead("SWITCH ROM".into(), addr).into()),
             VRAM..=SCRN1_END => Ok(self.ppu.read(addr)),
             SRAM..=SRAM_END => Ok(self.external_ram[addr as usize - 0xA000]),
-            RAM..=RAM_END => Err(BusError::InvalidRead("WORK BANK".into(), addr).into()),
-            RAMBANK..=RAMBANK_END => Err(BusError::InvalidRead("WORK BANK".into(), addr).into()),
-            ECHORAM..=ECHORAM_END => Err(BusError::InvalidRead("ECHO BANK".into(), addr).into()),
+            RAM..=RAMBANK_END => Ok(self.work_ram[addr as usize - RAM as usize]),
+            ECHORAM..=ECHORAM_END => Ok(self.work_ram[addr as usize - ECHORAM as usize]),
             OAMRAM..=OAMRAM_END => Err(BusError::InvalidRead("OAM".into(), addr).into()),
             0xFEA0..=0xFEFF => Err(BusError::InvalidRead("UNUSABLE".into(), addr).into()),
             IO..=IO_END | IE => match addr {
@@ -66,7 +65,9 @@ impl Bus {
                 }
                 LCDC => Ok(self.ppu.read(addr)),
                 IE => Err(BusError::InvalidRead("INTERRUPT REGISTER".into(), addr).into()),
-                _ => Err(BusError::InvalidRead("IO REGISTER".into(), addr).into()),
+                _ => Err(
+                    BusError::InvalidRead(format!("IO REGISTER {}", ioreg_name(addr)), addr).into(),
+                ),
             },
             HRAM..=HRAM_END => Ok(self.high_ram[addr as usize - HRAM as usize]),
         }
@@ -82,14 +83,9 @@ impl Bus {
             ROM..=ROM_END => Err(BusError::InvalidWrite("ROM".into(), addr, data).into()),
             ROMX..=ROMX_END => Err(BusError::InvalidWrite("SWITCH ROM".into(), addr, data).into()),
             VRAM..=SCRN1_END => Ok(self.ppu.write(addr, data)),
-            SRAM..=SRAM_END => Ok(self.external_ram[addr as usize - 0xA000] = data),
-            RAM..=RAM_END => Err(BusError::InvalidWrite("WORK BANK".into(), addr, data).into()),
-            RAMBANK..=RAMBANK_END => {
-                Err(BusError::InvalidWrite("WORK BANK".into(), addr, data).into())
-            }
-            ECHORAM..=ECHORAM_END => {
-                Err(BusError::InvalidWrite("ECHO BANK".into(), addr, data).into())
-            }
+            SRAM..=SRAM_END => Ok(self.external_ram[addr as usize - SRAM as usize] = data),
+            RAM..=RAMBANK_END => Ok(self.work_ram[addr as usize - RAM as usize] = data),
+            ECHORAM..=ECHORAM_END => Ok(self.work_ram[addr as usize - ECHORAM as usize] = data),
             OAMRAM..=OAMRAM_END => Err(BusError::InvalidWrite("OAM".into(), addr, data).into()),
             0xFEA0..=0xFEFF => Err(BusError::InvalidWrite("UNUSABLE".into(), addr, data).into()),
             IO..=IO_END | IE => match addr {
@@ -114,7 +110,12 @@ impl Bus {
                 }
                 LCDC | BGP => Ok(self.ppu.write(addr, data)),
                 IE => Err(BusError::InvalidWrite("INTERRUPT REGISTER".into(), addr, data).into()),
-                _ => Err(BusError::InvalidWrite("IO REGISTER".into(), addr, data).into()),
+                _ => Err(BusError::InvalidWrite(
+                    format!("IO REGISTER {}", ioreg_name(addr)),
+                    addr,
+                    data,
+                )
+                .into()),
             },
             HRAM..=HRAM_END => Ok(self.high_ram[addr as usize - HRAM as usize] = data),
         }
