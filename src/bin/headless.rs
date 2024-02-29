@@ -4,10 +4,14 @@ use gbc::ioreg_addr;
 use gbc::rom::ROM;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
+use signal_hook::consts::SIGINT;
+use signal_hook::iterator::Signals;
 use std::collections::HashSet;
 use std::io::{BufReader, Read};
 use std::str::FromStr;
+use std::sync::{Arc, Condvar, Mutex};
 use std::{env::args, fs::File};
+use std::{thread, time::Duration};
 
 const BUF: [u8; 0x8000] = [0x0; 0x8000];
 
@@ -68,10 +72,31 @@ fn main() -> Result<()> {
     };
     let mut machine = gbc::machine::Machine::new(rom);
     let mut breakpoints = HashSet::<u16>::new();
-
     let mut running = false;
+
+    let should_stop = Arc::new(Mutex::new(false));
+    let should_stop2 = should_stop.clone();
+
+    let mut signals = Signals::new(&[SIGINT])?;
+    thread::spawn(move || {
+        for sig in signals.forever() {
+            // acquire lock
+            let mut should_stop_inner = should_stop2.lock().unwrap();
+
+            println!("Received signal {:?}", sig);
+            *should_stop_inner = true;
+        }
+    });
+
+    let mut step_count = 0;
+    let check_for_signal_every = 1 << 16;
+
     'step: loop {
+        println!("running: {}", running);
         if !running {
+            if *should_stop.lock().unwrap() {
+                break 'step;
+            }
             let readline = rl.readline(">> ");
             match readline {
                 Ok(owned_str) => {
@@ -85,7 +110,7 @@ fn main() -> Result<()> {
                     match cmd {
                         "run" => {
                             running = true;
-                            continue;
+                            continue 'step;
                         }
                         "list" => {
                             let count = 12;
@@ -197,6 +222,15 @@ fn main() -> Result<()> {
         }
 
         while !breakpoints.contains(&machine.cpu.pc) {
+            step_count += 1;
+            if (step_count % check_for_signal_every) == 0 {
+                if *should_stop.lock().unwrap() {
+                    println!("Pausing execution.");
+                    running = false;
+                    *should_stop.lock().unwrap() = false;
+                    continue 'step;
+                }
+            }
             on_error!(continue 'step, machine, running, machine.step());
         }
         println!("Encountered breakpoint at ${:04x}", machine.cpu.pc);
