@@ -8,8 +8,8 @@ use crate::{
 
 #[derive(Clone, Copy)]
 pub struct AFRegisterPair {
-    pub a: u8,
     pub f: u8,
+    pub a: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -26,8 +26,8 @@ impl Default for AFRegister {
 
 #[derive(Default, Clone, Copy)]
 pub struct BCRegisterPair {
-    pub b: u8,
     pub c: u8,
+    pub b: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -44,8 +44,8 @@ impl Default for BCRegister {
 
 #[derive(Clone, Copy)]
 pub struct DERegisterPair {
-    pub d: u8,
     pub e: u8,
+    pub d: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -62,8 +62,8 @@ impl Default for DERegister {
 
 #[derive(Clone, Copy)]
 pub struct HLRegisterPair {
-    pub h: u8,
     pub l: u8,
+    pub h: u8,
 }
 
 #[derive(Clone, Copy)]
