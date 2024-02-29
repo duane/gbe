@@ -153,8 +153,16 @@ fn main() -> Result<()> {
                         }
                         "step" => {
                             let steps = args.next().unwrap_or(&"1").parse::<u32>().unwrap();
+                            assert!(steps > 0, "USAGE: step [STEPS]");
                             for _ in 0..steps {
                                 on_error!(continue 'step, machine, running, machine.step());
+                            }
+                        }
+                        "step_frame" => {
+                            let steps = args.next().unwrap_or(&"1").parse::<u32>().unwrap();
+                            assert!(steps > 0, "USAGE: step_frame [STEPS]");
+                            for _ in 0..steps {
+                                on_error!(continue 'step, machine, running, machine.step_frame());
                             }
                         }
                         "break" => {

@@ -58,7 +58,8 @@ bitflags! {
 pub struct PPU {
     pub vram: [u8; SCRN1_END as usize - VRAM as usize + 1],
     pub mode: Mode,
-    dot_counter: usize,
+    pub dot_counter: usize,
+    pub frame_count: usize,
     scanline_dot: usize,
     pub lcdc: LCDControl,
     pub bgp: BGPRegister,
@@ -78,8 +79,8 @@ impl PPU {
             vram: [0; SCRN1_END as usize - VRAM as usize + 1],
             mode: Mode::OAMScan,
             dot_counter: 0,
+            frame_count: 0,
             scanline_dot: 0,
-            // draw_dots: 0,
             lcdc: LCDControl::empty(),
             bgp: BGPRegister::default(),
             scy: 0,
@@ -100,6 +101,7 @@ impl PPU {
         self.vram = [0; SCRN1_END as usize - VRAM as usize + 1];
         self.mode = Mode::OAMScan;
         self.dot_counter = 0;
+        self.frame_count = 0;
         self.lcdc = LCDControl::empty();
         self.bgp = BGPRegister::default();
         self.scy = 0;
@@ -133,7 +135,7 @@ impl PPU {
         match addr {
             BGP => self.bgp = BGPRegister::from_bits(data),
             LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
-            SCY => self.scy = 0x0,
+            SCY => self.scy = data,
             SCX => self.scx = data,
             LYC => self.lyc = data,
             STAT => self.stat = STATRegister::from_bits(data & 0xf8 | self.stat.into_bits() & 0x7),
@@ -181,6 +183,7 @@ impl PPU {
             if self.ly as usize == HEIGHT {
                 assert!(self.dot_counter == DOTS_PER_FRAME - 4560);
                 self.stat.set_ppu_mode(PPUMode::VBlank);
+                self.frame_count += 1;
             }
         }
 
