@@ -1161,6 +1161,10 @@ impl CPU {
         if result.is_err() {
             println!("CPU state: {}", self);
         }
+
+        self.bus.tick(self.t as usize);
+        self.t = 0;
+
         result
     }
 }

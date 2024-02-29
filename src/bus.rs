@@ -42,6 +42,10 @@ impl Bus {
         }
     }
 
+    pub fn tick(&mut self, t_cycles: usize) {
+        self.ppu.tick(t_cycles);
+    }
+
     pub fn reset(&mut self) {
         self.work_ram = [0; ROM_SIZE + ROMX_SIZE];
         self.serial_out.reset();

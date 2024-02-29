@@ -1,7 +1,10 @@
 #[cfg(feature = "gfx")]
 pub mod screen;
+use std::fmt::{Display, Formatter};
+
 use crate::mem_layout::*;
 use bitfield_struct::bitfield;
+use color_eyre::Result;
 
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
@@ -55,14 +58,18 @@ bitflags! {
 pub struct PPU {
     pub vram: [u8; SCRN1_END as usize - VRAM as usize + 1],
     pub mode: Mode,
-    pub dot_counter: usize,
+    dot_counter: usize,
+    scanline_dot: usize,
     pub lcdc: LCDControl,
     pub bgp: BGPRegister,
     pub scy: u8,
     pub scx: u8,
     pub ly: u8,
     pub lyc: u8,
+    lx: u8,
     pub stat: STATRegister,
+
+    frame: [RgbPixel; WIDTH * HEIGHT],
 }
 
 impl PPU {
@@ -71,13 +78,21 @@ impl PPU {
             vram: [0; SCRN1_END as usize - VRAM as usize + 1],
             mode: Mode::OAMScan,
             dot_counter: 0,
+            scanline_dot: 0,
+            // draw_dots: 0,
             lcdc: LCDControl::empty(),
             bgp: BGPRegister::default(),
             scy: 0,
             scx: 0,
             ly: 0,
             lyc: 0,
+            lx: 0,
             stat: STATRegister::default(),
+            frame: [RgbPixel {
+                r: u8::MAX,
+                g: u8::MAX,
+                b: u8::MAX,
+            }; WIDTH * HEIGHT],
         }
     }
 
@@ -89,6 +104,15 @@ impl PPU {
         self.bgp = BGPRegister::default();
         self.scy = 0;
         self.scx = 0;
+        self.lx = 0;
+        self.ly = 0;
+        self.lyc = 0;
+        self.stat = STATRegister::default();
+        self.frame = [RgbPixel {
+            r: u8::MAX,
+            g: u8::MAX,
+            b: u8::MAX,
+        }; WIDTH * HEIGHT];
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -97,7 +121,7 @@ impl PPU {
             LCDC => self.lcdc.bits(),
             SCY => self.scy,
             SCX => self.scx,
-            LY => 0x90,
+            LY => self.ly,
             LYC => self.lyc,
             STAT => self.stat.into_bits(),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize],
@@ -109,7 +133,7 @@ impl PPU {
         match addr {
             BGP => self.bgp = BGPRegister::from_bits(data),
             LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
-            SCY => self.scy = data,
+            SCY => self.scy = 0x0,
             SCX => self.scx = data,
             LYC => self.lyc = data,
             STAT => self.stat = STATRegister::from_bits(data & 0xf8 | self.stat.into_bits() & 0x7),
@@ -118,12 +142,112 @@ impl PPU {
         }
     }
 
-    pub fn process_tick(&mut self, m_cycles: u8) {
-        assert!(m_cycles <= 6, "Invalid m_cycles {}", m_cycles);
-        self.dot_counter += m_cycles as usize;
-        if self.dot_counter >= DOTS_PER_FRAME {
-            self.dot_counter -= DOTS_PER_FRAME;
+    pub fn tick(&mut self, t_cycles: usize) {
+        assert!(t_cycles <= 24, "Invalid t_cycles {}", t_cycles);
+        let dots = t_cycles / 2;
+        if self.lcdc.contains(LCDControl::ENABLED) {
+            for _ in 0..dots {
+                self.tick_single_dot();
+            }
         }
+    }
+
+    pub fn tick_single_dot(&mut self) {
+        if self.stat.ppu_mode() == PPUMode::OAMScan {
+            if self.scanline_dot == 80 {
+                self.stat.set_ppu_mode(PPUMode::Draw);
+            }
+        }
+
+        if self.stat.ppu_mode() == PPUMode::Draw {
+            if self.lx as usize == WIDTH {
+                self.stat.set_ppu_mode(PPUMode::HBlank);
+                self.lx = 0;
+            } else {
+                self.lx += self.draw();
+            }
+        }
+
+        if self.stat.ppu_mode() == PPUMode::HBlank {
+            if self.scanline_dot == 456 {
+                assert_eq!(
+                    self.dot_counter,
+                    DOTS_PER_FRAME - 4560 - (HEIGHT - 1 - self.ly as usize) * 456
+                );
+                self.ly += 1;
+                self.scanline_dot = 0;
+                self.stat.set_ppu_mode(PPUMode::OAMScan)
+            }
+            if self.ly as usize == HEIGHT {
+                assert!(self.dot_counter == DOTS_PER_FRAME - 4560);
+                self.stat.set_ppu_mode(PPUMode::VBlank);
+            }
+        }
+
+        if self.stat.ppu_mode() != PPUMode::VBlank {
+            self.scanline_dot += 1;
+        }
+
+        if self.stat.ppu_mode() == PPUMode::VBlank && self.dot_counter == DOTS_PER_FRAME {
+            self.dot_counter = 0;
+            self.ly = 0;
+            self.stat.set_ppu_mode(PPUMode::OAMScan);
+        } else {
+            self.dot_counter += 1;
+        }
+    }
+
+    fn update_stat(&mut self) {}
+
+    // returns dots left to burn after OAM scan.
+    fn oam_scan(&mut self, _: usize) {}
+
+    // return number of dots actually drawn
+    fn draw(&mut self) -> u8 {
+        let x = self.scx + self.lx;
+        let tile_x = x as usize % 8;
+        let y = self.scy + self.ly;
+        let tile_y = y as usize % 8;
+        let tile_map = if self.lcdc.contains(LCDControl::WTMAP_IDX) {
+            0x9c00
+        } else {
+            0x9800
+        } - VRAM;
+        let tile_data = if self.lcdc.contains(LCDControl::TILE_DATA_IDX) {
+            0x8000
+        } else {
+            0x8800
+        } - VRAM;
+        let tile_map_row = (y / 8) as u16;
+        let tile_map_col = (x / 8) as u16;
+        let tile_map_idx = tile_map + tile_map_row * 32 + tile_map_col;
+        let tile_idx = self.vram[tile_map_idx as usize];
+        let tile_addr = tile_data + tile_idx as u16 * 16;
+        let msb = self.vram[tile_addr as usize + tile_y * 2];
+        let lsb = self.vram[tile_addr as usize + tile_y * 2 + 1];
+        let bit = 1 << (7 - tile_x);
+        let color_num = ((msb & bit) >> (7 - tile_x)) << 1 | ((lsb & bit) >> (7 - tile_x));
+        let color = match color_num {
+            0b00 => RgbPixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+            0b01 => RgbPixel {
+                r: 192,
+                g: 192,
+                b: 192,
+            },
+            0b10 => RgbPixel {
+                r: 96,
+                g: 96,
+                b: 96,
+            },
+            0b11 => RgbPixel { r: 0, g: 0, b: 0 },
+            _ => panic!("Invalid color number {}", color_num),
+        };
+        self.frame[self.ly as usize * WIDTH + self.lx as usize] = color;
+        1
     }
 
     #[cfg(feature = "headless-render")]
@@ -138,7 +262,11 @@ impl PPU {
                 img.put_pixel(
                     x as u32,
                     y as u32,
-                    Rgb([x as u8, y as u8, x as u8 ^ y as u8]),
+                    Rgb([
+                        self.frame[y * WIDTH + x].r,
+                        self.frame[y * WIDTH + x].g,
+                        self.frame[y * WIDTH + x].b,
+                    ]),
                 );
             }
         }
@@ -201,6 +329,19 @@ pub struct STATRegister {
     pub mode_0: bool,
     #[bits(1)]
     pub ly_eq_lyc: bool,
-    #[bits(2, default = PPUMode::HBlank, from = PPUMode::from_bits)]
+    #[bits(2, default = PPUMode::OAMScan, from = PPUMode::from_bits)]
     pub ppu_mode: PPUMode,
+}
+
+impl Display for PPUMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct RgbPixel {
+    r: u8,
+    g: u8,
+    b: u8,
 }
