@@ -7,7 +7,7 @@ use rustyline::DefaultEditor;
 use signal_hook::consts::SIGINT;
 use signal_hook::iterator::Signals;
 use std::collections::HashSet;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Write};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -190,6 +190,33 @@ fn main() -> Result<()> {
                             let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
                             let word = read_u16!(continue 'step, machine, running, addr);
                             println!("${:04x}", word);
+                        }
+                        "dump" => {
+                            let start_addr = u16::from_str_radix(
+                                args.next().expect("USAGE: dump START END FILE"),
+                                16,
+                            )
+                            .expect("USAGE: dump START END FILE");
+                            let end_addr = u16::from_str_radix(
+                                args.next().expect("USAGE: dump START END FILE"),
+                                16,
+                            )
+                            .expect("USAGE: dump START END FILE");
+                            let filename = args.next().expect("USAGE: dump START END FILE");
+                            let mut file = File::create(filename).unwrap();
+                            for addr in start_addr..end_addr {
+                                let byte = read_u8!(continue 'step, machine, running, addr);
+                                file.write_all(&[byte]).unwrap();
+                            }
+                            file.flush().unwrap();
+                        }
+                        #[cfg(feature = "headless-render")]
+                        "render" => {
+                            let filename = args.next().expect("USAGE: render FILE");
+                            let mut file = File::create(filename).unwrap();
+                            let frame = machine.cpu.bus.ppu.frame();
+                            file.write_all(&frame).unwrap();
+                            file.flush().unwrap();
                         }
                         "exit" => {
                             break;

@@ -1186,19 +1186,23 @@ impl Display for CPU {
 mod tests {
     use crate::machine::Machine;
     use crate::rom::ROM;
-    const EMPTY_ROM: &[u8; 0x8000] = concat_bytes!(
-        [0; 0x104],
-        // nintendo logo
-        b"\xce\xedff\xcc\r\x00\x0b\x03s\x00\x83\x00\x0c\x00\r\x00\x08\x11\x1f\x88\x89\x00\x0e\xdc\xccn\xe6\xdd\xdd\xd9\x99\xbb\xbbgcn\x0e\xec\xcc\xdd\xdc\x99\x9f\xbb\xb93>",
-        // checksum
-        [0xe7],
-        // remaining padding
-        [0; 0x7ecb]);
 
     #[test]
-    fn post_boot() {
+    fn boot() {
+        // https://gbdev.io/pandocs/Power_Up_Sequence.html
+
+        const VALID_BUT_EMPTY_ROM: &[u8; 0x8000] = concat_bytes!(
+            [0; 0x104],
+            // nintendo logo
+            b"\xce\xedff\xcc\r\x00\x0b\x03s\x00\x83\x00\x0c\x00\r\x00\x08\x11\x1f\x88\x89\x00\x0e\xdc\xccn\xe6\xdd\xdd\xd9\x99\xbb\xbbgcn\x0e\xec\xcc\xdd\xdc\x99\x9f\xbb\xb93>",
+            // checksum
+            [0xe7],
+            // remaining padding
+            [0; 0x7ecb]
+        );
+
         unsafe {
-            let mut machine = Machine::new(ROM::from_buf(EMPTY_ROM.to_vec()));
+            let mut machine = Machine::new(ROM::from_buf(VALID_BUT_EMPTY_ROM.to_vec()));
             while machine.cpu.pc != 0x100 {
                 machine.step().unwrap();
                 // println!("pc: ${:02x}", machine.cpu.pc);

@@ -5,6 +5,8 @@ use bitfield_struct::bitfield;
 
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
+pub const WIDTH: usize = 160;
+pub const HEIGHT: usize = 144;
 
 use bitflags::bitflags;
 
@@ -122,6 +124,28 @@ impl PPU {
         if self.dot_counter >= DOTS_PER_FRAME {
             self.dot_counter -= DOTS_PER_FRAME;
         }
+    }
+
+    #[cfg(feature = "headless-render")]
+    pub fn frame(&self) -> Vec<u8> {
+        use std::io::Cursor;
+
+        use image::{Rgb, RgbImage};
+
+        let mut img = RgbImage::new(WIDTH as u32, HEIGHT as u32);
+        for x in 0..WIDTH {
+            for y in 0..HEIGHT {
+                img.put_pixel(
+                    x as u32,
+                    y as u32,
+                    Rgb([x as u8, y as u8, x as u8 ^ y as u8]),
+                );
+            }
+        }
+        let mut buf: Vec<u8> = Vec::new();
+        img.write_to(&mut Cursor::new(&mut buf), image::ImageOutputFormat::Png)
+            .unwrap();
+        buf
     }
 }
 

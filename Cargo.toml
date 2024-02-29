@@ -6,7 +6,8 @@ edition = "2021"
 [features]
 gfx = ["bevy"]
 precompute = ["regex"]
-default = ["gfx"]
+headless-render = ["image"]
+default = ["headless-render"]
 
 [[bin]]
 name = "precompute"
@@ -21,7 +22,7 @@ required-features = []
 [[bin]]
 name = "gfx"
 path = "src/bin/gfx.rs"
-required_features = ["gfx"]
+required-features = ["gfx"]
 
 [[bin]]
 name = "headless"
@@ -30,6 +31,10 @@ required-features = []
 
 [dependencies]
 thiserror = "1.0.57"
+
+[dependencies.image]
+version = "*"
+optional = true
 
 [dependencies.regex]
 version = "1.5.4"
