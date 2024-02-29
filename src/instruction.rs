@@ -191,6 +191,17 @@ impl R16Mem {
     }
 }
 
+impl R16Mem {
+    fn ref_operand(&self) -> &'static str {
+        match self {
+            R16Mem::R16MemBC => "[bc]",
+            R16Mem::R16MemDE => "[de]",
+            R16Mem::R16MemHLInc => "[hl+]",
+            R16Mem::R16MemHLDec => "[hl-]",
+        }
+    }
+}
+
 impl Display for R16Mem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -441,7 +452,7 @@ impl Display for Instruction {
             Instruction::StopN8(val) => write!(f, "stop ${:02x}", val),
 
             Instruction::LoadR16N16(r16, imm16) => write!(f, "ld {}, {}", r16, imm16),
-            Instruction::LoadAR16Mem(r16mem) => write!(f, "ld a, [{}]", r16mem),
+            Instruction::LoadAR16Mem(r16mem) => write!(f, "ld a, {}", r16mem.ref_operand()),
             Instruction::LoadAA16(imm16) => write!(f, "ld a, [{}]", imm16),
             Instruction::LoadR8N8(r8, imm8) => write!(f, "ld {}, {}", r8, imm8),
             Instruction::LoadR8R8(r8_dst, r8_src) => write!(f, "ld {}, {}", r8_dst, r8_src),
@@ -450,7 +461,7 @@ impl Display for Instruction {
 
             Instruction::StoreAA16(imm16) => write!(f, "ld [{}], A", imm16),
             Instruction::StoreACH => write!(f, "ldh [c], a"),
-            Instruction::StoreAR16Mem(dest) => write!(f, "ld [{}], a", dest),
+            Instruction::StoreAR16Mem(r16mem) => write!(f, "ld {}, a", r16mem.ref_operand()),
             Instruction::StoreAA8H(imm8) => write!(f, "ldh [${:02x}], a", imm8),
             Instruction::StoreSPA16(imm16) => write!(f, "ld [{}], sp", imm16),
 

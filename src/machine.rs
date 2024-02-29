@@ -1,6 +1,7 @@
 use crate::bus::Bus;
 use crate::cpu::CPU;
 use crate::rom::ROM;
+use color_eyre::Result;
 
 pub struct Machine {
     pub cpu: CPU,
@@ -12,7 +13,7 @@ impl Machine {
         Machine { cpu: CPU::new(bus) }
     }
 
-    pub fn step(&mut self) {
-        self.cpu.execute_single_instruction().unwrap();
+    pub fn step(&mut self) -> Result<()> {
+        self.cpu.execute_single_instruction()
     }
 }
