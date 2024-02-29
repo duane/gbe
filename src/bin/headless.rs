@@ -1,4 +1,5 @@
 use color_eyre::Result;
+use gbc::ioreg_addr;
 use gbc::rom::ROM;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
@@ -7,6 +8,12 @@ use std::io::{BufReader, Read};
 use std::{env::args, fs::File};
 
 const BUF: [u8; 0x8000] = [0x0; 0x8000];
+
+fn parse_addr(addr: &str) -> u16 {
+    ioreg_addr(addr).unwrap_or_else(|| {
+        u16::from_str_radix(addr, 16).expect(format!("Not a valid address: {}", addr).as_str())
+    })
+}
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -56,7 +63,7 @@ fn main() -> Result<()> {
                         "list" => {
                             let count = 12;
                             let mut addr = match args.next() {
-                                Some(addr) => u16::from_str_radix(addr, 16).unwrap(),
+                                Some(addr) => parse_addr(addr),
                                 None => machine.cpu.pc,
                             };
                             for _ in 0..count {
@@ -107,9 +114,12 @@ fn main() -> Result<()> {
                         "regs" => {
                             // println!("{:?}", machine.cpu.registers);
                         }
-                        "mem" => {
-                            let addr_arg = args.next().expect(&"USAGE: mem ADDR");
-                            let addr = u16::from_str_radix(&addr_arg, 16).unwrap();
+                        "xb" => {
+                            let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
+                            println!("${:02x}", machine.cpu.bus.read_u8(addr)?);
+                        }
+                        "xw" => {
+                            let addr = parse_addr(args.next().expect(&"USAGE: mem ADDR"));
                             println!("${:04x}", machine.cpu.bus.read_u16(addr)?);
                         }
                         "exit" => {
