@@ -1,3 +1,5 @@
+#![feature(concat_bytes)]
+
 pub mod apu;
 pub mod bus;
 pub mod cartridge;

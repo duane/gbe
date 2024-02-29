@@ -1,3 +1,6 @@
+pub const BOOT_ROM_END: u16 = 0xFF;
+pub const BOOT_ROM_SIZE: usize = 0x100;
+
 pub const ROM: u16 = 0x0000;
 pub const ROM_END: u16 = 0x3FFF;
 pub const ROM_SIZE: usize = (ROM_END - ROM + 1) as usize;
@@ -115,6 +118,9 @@ pub const SVBK: u16 = 0xFF70; // WRAM bank
 pub const PCM12: u16 = 0xFF76; // Audio digital outputs 1 & 2
 pub const PCM34: u16 = 0xFF77; // Audio digital outputs 3 & 4
 pub const IE: u16 = 0xFFFF; // Interrupt enable
+
+// undocumented
+pub const BOOT_ROM_ENABLE: u16 = 0xFF50;
 
 pub fn ioreg_addr(name: &str) -> Option<u16> {
     let result = match name.to_uppercase().as_str() {

@@ -23,7 +23,10 @@ pub struct Bus {
     pub external_ram: [u8; SRAM_SIZE],
     pub high_ram: [u8; HRAM_SIZE],
     pub ppu: PPU,
+    pub boot_rom_enabled: bool,
 }
+
+const BOOT_ROM: &'static [u8; BOOT_ROM_SIZE] = include_bytes!("../assets/boot/dmg.bin");
 
 impl Bus {
     pub fn new(rom: ROM) -> Self {
@@ -35,6 +38,7 @@ impl Bus {
             external_ram: [0; SRAM_SIZE],
             high_ram: [0; HRAM_SIZE],
             ppu: PPU::new(),
+            boot_rom_enabled: true,
         }
     }
 
@@ -45,6 +49,7 @@ impl Bus {
         self.external_ram = [0; SRAM_SIZE];
         self.high_ram = [0; HRAM_SIZE];
         self.ppu.reset();
+        self.boot_rom_enabled = true;
     }
 
     pub fn read_u16(&self, addr: u16) -> Result<u16> {
@@ -55,6 +60,7 @@ impl Bus {
 
     pub fn read_u8(&self, addr: u16) -> Result<u8> {
         match addr {
+            ROM..=BOOT_ROM_END if self.boot_rom_enabled => Ok(BOOT_ROM[addr as usize]),
             ROM..=ROM_END => Ok(self.rom.buf[addr as usize]),
             ROMX..=ROMX_END => Err(BusError::InvalidRead("SWITCH ROM".into(), addr).into()),
             VRAM..=SCRN1_END => Ok(self.ppu.read(addr)),
@@ -115,6 +121,11 @@ impl Bus {
                 }
                 LCDC | BGP | SCY | SCX | LYC | STAT => Ok(self.ppu.write(addr, data)),
                 IE => Err(BusError::InvalidWrite("INTERRUPT REGISTER".into(), addr, data).into()),
+
+                // undocumented
+                BOOT_ROM_ENABLE => Ok(if self.boot_rom_enabled {
+                    self.boot_rom_enabled = data != 0;
+                }),
                 _ => Err(BusError::InvalidWrite(
                     format!("IO REGISTER {}", ioreg_name(addr)),
                     addr,

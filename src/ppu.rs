@@ -95,7 +95,7 @@ impl PPU {
             LCDC => self.lcdc.bits(),
             SCY => self.scy,
             SCX => self.scx,
-            LY => self.ly,
+            LY => 0x90,
             LYC => self.lyc,
             STAT => self.stat.into_bits(),
             VRAM..=SCRN1_END => self.vram[addr as usize - VRAM as usize],
