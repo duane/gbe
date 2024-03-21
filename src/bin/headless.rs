@@ -1,3 +1,9 @@
+#![allow(clippy::needless_borrow)]
+#![allow(clippy::needless_borrows_for_generic_args)]
+#![allow(clippy::unused_io_amount)]
+#![allow(clippy::expect_fun_call)]
+#![allow(clippy::collapsible_if)]
+
 use color_eyre::Result;
 use gbc::cpu::RegRef;
 use gbc::ioreg_addr;

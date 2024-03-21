@@ -1,7 +1,7 @@
 use crate::apu::APU;
 use crate::mem_layout::*;
 use crate::ppu::PPU;
-use crate::rom::ROM;
+use crate::rom::{MBCHeader, ROM};
 use crate::serial::SerialOut;
 
 use color_eyre::Result;
@@ -26,7 +26,7 @@ pub struct Bus {
     pub boot_rom_enabled: bool,
 }
 
-const BOOT_ROM: &'static [u8; BOOT_ROM_SIZE] = include_bytes!("../assets/boot/dmg.bin");
+const BOOT_ROM: &[u8; BOOT_ROM_SIZE] = include_bytes!("../assets/boot/dmg.bin");
 
 impl Bus {
     pub fn new(rom: ROM) -> Self {
@@ -66,7 +66,13 @@ impl Bus {
         match addr {
             ROM..=BOOT_ROM_END if self.boot_rom_enabled => Ok(BOOT_ROM[addr as usize]),
             ROM..=ROM_END => Ok(self.rom.buf[addr as usize]),
-            ROMX..=ROMX_END => Err(BusError::InvalidRead("SWITCH ROM".into(), addr).into()),
+            ROMX..=ROMX_END => {
+                if self.rom.mbc() == MBCHeader::MBC1 {
+                    Ok(self.rom.buf[addr as usize])
+                } else {
+                    Err(BusError::InvalidRead("SWITCH ROM".into(), addr).into())
+                }
+            }
             VRAM..=SCRN1_END => Ok(self.ppu.read(addr)),
             SRAM..=SRAM_END => Ok(self.external_ram[addr as usize - 0xA000]),
             RAM..=RAMBANK_END => Ok(self.work_ram[addr as usize - RAM as usize]),
@@ -103,65 +109,73 @@ impl Bus {
             ECHORAM..=ECHORAM_END => Ok(self.work_ram[addr as usize - ECHORAM as usize] = data),
             OAMRAM..=OAMRAM_END => Err(BusError::InvalidWrite("OAM".into(), addr, data).into()),
             0xFEA0..=0xFEFF => Err(BusError::InvalidWrite("UNUSABLE".into(), addr, data).into()),
-            IO..=IO_END | IE => match addr {
-                JOYP => Err(BusError::InvalidWrite("JOYP REGISTER".into(), addr, data).into()),
-                SB | SC => Ok(self.serial_out.write(addr, data)),
-                DIV => Err(BusError::InvalidWrite("DIVIDER REGISTER".into(), addr, data).into()), // Divider Register
-                TIMA => {
-                    Err(BusError::InvalidWrite("TIMER COUNTER REGISTER".into(), addr, data).into())
-                } // Divider Register
-                TIM => {
-                    println!("Writing ${:02x} to TIM", data);
-                    Ok(())
-                } // Divider Register
-                TAC => {
-                    println!("Writing ${:02x} to TAC", data);
-                    Ok(())
-                } // Divider Register
-                IF => {
-                    println!("Writing ${:02x} to IF", data);
-                    Ok(())
-                } // Divider Register
+            IO..=IO_END | IE => {
+                println!("writing ${:02x} to {}", data, ioreg_name(addr));
+                match addr {
+                    JOYP => Err(BusError::InvalidWrite("JOYP REGISTER".into(), addr, data).into()),
+                    SB | SC => Ok(self.serial_out.write(addr, data)),
+                    DIV => {
+                        Err(BusError::InvalidWrite("DIVIDER REGISTER".into(), addr, data).into())
+                    } // Divider Register
+                    TIMA => {
+                        Err(
+                            BusError::InvalidWrite("TIMER COUNTER REGISTER".into(), addr, data)
+                                .into(),
+                        )
+                    } // Divider Register
+                    TIM => {
+                        println!("Writing ${:02x} to TIM", data);
+                        Ok(())
+                    } // Divider Register
+                    TAC => {
+                        println!("Writing ${:02x} to TAC", data);
+                        Ok(())
+                    } // Divider Register
+                    IF => {
+                        println!("Writing ${:02x} to IF", data);
+                        Ok(())
+                    } // Divider Register
 
-                NR10..=NR14 | NR21..=NR34 | NR41..=NR52 | WAVE_RAM..=WAVE_RAM_END => {
-                    Ok(self.apu.write(addr, data))
-                }
-                LCDC | BGP | SCY | SCX | LYC | STAT => Ok(self.ppu.write(addr, data)),
+                    NR10..=NR14 | NR21..=NR34 | NR41..=NR52 | WAVE_RAM..=WAVE_RAM_END => {
+                        Ok(self.apu.write(addr, data))
+                    }
+                    LCDC | BGP | SCY | SCX | LYC | STAT => Ok(self.ppu.write(addr, data)),
 
-                WX => {
-                    println!("Writing ${:02x} to WX", data);
-                    Ok(())
-                }
-                WY => {
-                    println!("Writing ${:02x} to WX", data);
-                    Ok(())
-                }
+                    WX => {
+                        println!("Writing ${:02x} to WX", data);
+                        Ok(())
+                    }
+                    WY => {
+                        println!("Writing ${:02x} to WX", data);
+                        Ok(())
+                    }
 
-                OBP0 => {
-                    println!("Writing ${:02x} to OBP0", data);
-                    Ok(())
-                }
-                OBP1 => {
-                    println!("Writing ${:02x} to OBP1", data);
-                    Ok(())
-                }
+                    OBP0 => {
+                        println!("Writing ${:02x} to OBP0", data);
+                        Ok(())
+                    }
+                    OBP1 => {
+                        println!("Writing ${:02x} to OBP1", data);
+                        Ok(())
+                    }
 
-                IE => {
-                    println!("Writing ${:02x} to IE", data);
-                    Ok(())
-                }
+                    IE => {
+                        println!("Writing ${:02x} to IE", data);
+                        Ok(())
+                    }
 
-                // undocumented
-                BOOT_ROM_ENABLE => Ok(if self.boot_rom_enabled {
-                    self.boot_rom_enabled = data == 0;
-                }),
-                _ => Err(BusError::InvalidWrite(
-                    format!("IO REGISTER {}", ioreg_name(addr)),
-                    addr,
-                    data,
-                )
-                .into()),
-            },
+                    // undocumented
+                    BOOT_ROM_ENABLE => Ok(if self.boot_rom_enabled {
+                        self.boot_rom_enabled = data == 0;
+                    }),
+                    _ => Err(BusError::InvalidWrite(
+                        format!("IO REGISTER {}", ioreg_name(addr)),
+                        addr,
+                        data,
+                    )
+                    .into()),
+                }
+            }
             HRAM..=HRAM_END => Ok(self.high_ram[addr as usize - HRAM as usize] = data),
         }
     }

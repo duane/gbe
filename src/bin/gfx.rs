@@ -1,8 +1,12 @@
+#![allow(clippy::nonminimal_bool)]
+#![allow(clippy::needless_update)]
+#![allow(clippy::unit_arg)]
+#![allow(clippy::unused_io_amount)]
+
 use std::{
     env::args,
     fs::File,
     io::{BufReader, Read},
-    time::Duration,
 };
 
 use bevy::{
@@ -17,8 +21,6 @@ use gbc::{
     ppu::{HEIGHT, UPDATES_PER_SECOND, WIDTH},
     rom::ROM,
 };
-
-const MIN_SCALE_FACTOR: usize = 5;
 
 const MAX_SCALE_FACTOR: usize = 5;
 const MIN_WIDTH: usize = WIDTH * MAX_SCALE_FACTOR;

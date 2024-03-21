@@ -3,7 +3,6 @@ use std::fmt::{Display, Formatter};
 
 use crate::mem_layout::*;
 use bitfield_struct::bitfield;
-use color_eyre::Result;
 
 pub const DOTS_PER_FRAME: usize = 70224;
 pub const DOTS_PER_SECOND: usize = 0x400000;
@@ -44,6 +43,7 @@ impl Mode {
 }
 
 bitflags! {
+    #[derive(Debug)]
     pub struct LCDControl: u8 {
         const ENABLED = 0b1000_0000;
         const WTMAP_IDX = 0b0100_0000;
@@ -73,6 +73,13 @@ pub struct PPU {
 
     pub frame: [u8; WIDTH * HEIGHT * 4],
 }
+
+const GRAYSCALE_COLORS: [[u8; 4]; 4] = [
+    [255, 255, 255, 255],
+    [192, 192, 192, 255],
+    [96, 96, 96, 255],
+    [0, 0, 0, 255],
+];
 
 impl PPU {
     pub fn new() -> PPU {
@@ -125,10 +132,29 @@ impl PPU {
     }
 
     pub fn write(&mut self, addr: u16, data: u8) {
+        if addr > 0xff00 {
+            println!("Writing ${:02x} to LCD register {}", data, ioreg_name(addr));
+        }
         match addr {
             BGP => self.bgp = BGPRegister::from_bits(data),
-            LCDC => self.lcdc = LCDControl::from_bits_truncate(data),
-            SCY => self.scy = data,
+            LCDC => {
+                self.lcdc = {
+                    let lcdc = LCDControl::from_bits_truncate(data);
+                    println!("new lcdc: {:?}", lcdc);
+                    if !lcdc.contains(LCDControl::ENABLED) {
+                        // self.scy = 0;
+                        // self.scx = 0;
+                        // self.ly = 0;
+                        // self.lx = 0;
+                        self.dot_counter = 0;
+                    }
+                    LCDControl::from_bits_truncate(data)
+                }
+            }
+            SCY => {
+                println!("wrote ${:02x} to SCY", data);
+                self.scy = data;
+            }
             SCX => self.scx = data,
             LYC => self.lyc = data,
             STAT => self.stat = STATRegister::from_bits(data & 0xf8 | self.stat.into_bits() & 0x7),
@@ -150,11 +176,13 @@ impl PPU {
     pub fn tick_single_dot(&mut self) {
         if self.stat.ppu_mode() == PPUMode::OAMScan {
             if self.scanline_dot == 80 {
+                // assert!(self.ly < 144);
                 self.stat.set_ppu_mode(PPUMode::Draw);
             }
         }
 
         if self.stat.ppu_mode() == PPUMode::Draw {
+            // assert!(self.ly < 144, "Invalid ly {}", self.ly);
             if self.lx as usize == WIDTH {
                 self.stat.set_ppu_mode(PPUMode::HBlank);
                 self.lx = 0;
@@ -163,46 +191,45 @@ impl PPU {
             }
         }
 
-        if self.stat.ppu_mode() == PPUMode::HBlank {
+        if self.stat.ppu_mode() == PPUMode::HBlank || self.stat.ppu_mode() == PPUMode::VBlank {
             if self.scanline_dot == 456 {
-                assert_eq!(
-                    self.dot_counter,
-                    DOTS_PER_FRAME - 4560 - (HEIGHT - 1 - self.ly as usize) * 456
-                );
+                if self.ly >= HEIGHT as u8 {
+                    // assert!(self.dot_counter == DOTS_PER_FRAME - 4560);
+                    self.stat.set_ppu_mode(PPUMode::VBlank);
+                    self.frame_count += 1;
+                } else {
+                    self.stat.set_ppu_mode(PPUMode::OAMScan);
+                }
                 self.ly += 1;
                 self.scanline_dot = 0;
-                self.stat.set_ppu_mode(PPUMode::OAMScan)
+            } else {
+                self.scanline_dot += 1;
             }
-            if self.ly as usize == HEIGHT {
-                assert!(self.dot_counter == DOTS_PER_FRAME - 4560);
-                self.stat.set_ppu_mode(PPUMode::VBlank);
-                self.frame_count += 1;
-            }
-        }
-
-        if self.stat.ppu_mode() != PPUMode::VBlank {
+        } else if self.scanline_dot == 456 {
+            self.scanline_dot = 0;
+            self.stat.set_ppu_mode(PPUMode::OAMScan);
+            self.ly += 1;
+        } else {
             self.scanline_dot += 1;
         }
 
         if self.stat.ppu_mode() == PPUMode::VBlank && self.dot_counter == DOTS_PER_FRAME {
+            println!("blanking");
             self.dot_counter = 0;
             self.ly = 0;
+            self.lx = 0;
             self.stat.set_ppu_mode(PPUMode::OAMScan);
         } else {
             self.dot_counter += 1;
         }
     }
 
-    fn update_stat(&mut self) {}
-
-    // returns dots left to burn after OAM scan.
-    fn oam_scan(&mut self, _: usize) {}
-
     // return number of dots actually drawn
     fn draw(&mut self) -> u8 {
-        let x = self.scx + self.lx;
+        // assert!(self.ly < 144);
+        let x = self.scy.wrapping_add(self.lx);
         let tile_x = x as usize % 8;
-        let y = self.scy + self.ly;
+        let y = self.scy.wrapping_add(self.ly);
         let tile_y = y as usize % 8;
         let tile_map = if self.lcdc.contains(LCDControl::WTMAP_IDX) {
             0x9c00
@@ -224,10 +251,10 @@ impl PPU {
         let bit = 1 << (7 - tile_x);
         let color_num = ((msb & bit) >> (7 - tile_x)) << 1 | ((lsb & bit) >> (7 - tile_x));
         let color = match color_num {
-            0b00 => &[255, 255, 255, 255],
-            0b01 => &[192, 192, 192, 255],
-            0b10 => &[96, 96, 96, 255],
-            0b11 => &[0, 0, 0, 255],
+            0b00 => &GRAYSCALE_COLORS[self.bgp.id3()],
+            0b01 => &GRAYSCALE_COLORS[self.bgp.id2()],
+            0b10 => &GRAYSCALE_COLORS[self.bgp.id1()],
+            0b11 => &GRAYSCALE_COLORS[self.bgp.id0()],
             _ => panic!("Invalid color number {}", color_num),
         };
         let start_idx = (self.ly as usize * WIDTH + self.lx as usize) * 4;
@@ -321,6 +348,6 @@ pub struct STATRegister {
 
 impl Display for PPUMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }

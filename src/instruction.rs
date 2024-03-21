@@ -582,7 +582,7 @@ impl Instruction {
             Instruction::StoreACH => vec![self.opcode()],
             Instruction::StoreAA16(addr) => vec![self.opcode(), *addr as u8, (*addr >> 8) as u8],
             Instruction::StoreAR16Mem(_) => vec![self.opcode()],
-            Instruction::StoreAA8H(addr) => vec![self.opcode(), (*addr & 0xff) as u8],
+            Instruction::StoreAA8H(addr) => vec![self.opcode(), *addr & 0xff],
             Instruction::StoreSPA16(imm16) => {
                 vec![self.opcode(), *imm16 as u8, (*imm16 >> 8) as u8]
             }
@@ -821,7 +821,7 @@ impl Instruction {
 
     fn read_u16_helper(buf: &[u8], addr: usize) -> u16 {
         let lo = buf[addr];
-        let hi = buf[(addr + 1)];
+        let hi = buf[addr + 1];
         ((hi as u16) << 8) | (lo as u16)
     }
 
@@ -1335,12 +1335,12 @@ impl Instruction {
     pub fn from_u8_slice(buf: &[u8], addr: u16) -> Result<(Instruction, u8), InstructionError> {
         let addr = addr as usize;
         let size = OPCODE_SIZE_LOOKUP[buf[addr] as usize] as usize;
-        let insn = buf[addr as usize];
+        let insn = buf[addr];
         if size == 0 {
             return Err(InstructionError::Illegal(buf[0]).into());
         }
         if addr + size > buf.len() {
-            return Err(InstructionError::Incomplete(buf[addr as usize..].to_vec()).into());
+            return Err(InstructionError::Incomplete(buf[addr..].to_vec()).into());
         }
         let insn = match insn {
             0x0 => Instruction::Nop,

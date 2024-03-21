@@ -352,6 +352,9 @@ impl CPU {
                 self.af.single.a = self.bus.read_u8(0xff00 + self.bc.single.c as u16)?;
             },
             Instruction::LoadAA8H(addr) => {
+                // if addr == 0x44 {
+                //     println!("${:04X}: LDH a, [0x44]", self.pc);
+                // }
                 self.af.single.a = self.bus.read_u8(addr as u16 + 0xff00)?;
             }
             Instruction::StoreAA16(addr) => unsafe {
@@ -401,10 +404,10 @@ impl CPU {
             }
             Instruction::IncR16(r16) => unsafe {
                 match r16 {
-                    R16::R16BC => self.bc.bc += 1,
-                    R16::R16DE => self.de.de += 1,
-                    R16::R16HL => self.hl.hl += 1,
-                    R16::R16Sp => self.sp += 1,
+                    R16::R16BC => self.bc.bc = self.bc.bc.wrapping_add(1),
+                    R16::R16DE => self.de.de = self.de.de.wrapping_add(1),
+                    R16::R16HL => self.hl.hl = self.hl.hl.wrapping_add(1),
+                    R16::R16Sp => self.sp = self.sp.wrapping_add(1),
                 }
             },
             Instruction::IncR8(r8) => unsafe {
@@ -646,7 +649,7 @@ impl CPU {
             },
 
             Instruction::AndR8(reg) => unsafe {
-                match reg as R8 {
+                match reg {
                     R8::R8B => self.af.single.a &= self.bc.single.b,
                     R8::R8C => self.af.single.a &= self.bc.single.c,
                     R8::R8D => self.af.single.a &= self.de.single.d,
@@ -664,7 +667,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
             Instruction::OrR8(reg) => unsafe {
-                match reg as R8 {
+                match reg {
                     R8::R8B => self.af.single.a |= self.bc.single.b,
                     R8::R8C => self.af.single.a |= self.bc.single.c,
                     R8::R8D => self.af.single.a |= self.de.single.d,
@@ -682,7 +685,7 @@ impl CPU {
                     ((z as u8) << 7) | ((n as u8) << 6) | ((h as u8) << 5) | ((c as u8) << 4);
             },
             Instruction::XorR8(reg) => unsafe {
-                match reg as R8 {
+                match reg {
                     R8::R8B => self.af.single.a ^= self.bc.single.b,
                     R8::R8C => self.af.single.a ^= self.bc.single.c,
                     R8::R8D => self.af.single.a ^= self.de.single.d,

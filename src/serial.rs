@@ -30,6 +30,7 @@ impl SerialOut {
     }
 
     pub fn write(&mut self, addr: u16, data: u8) {
+        println!("Writing ${:02x} to {}", data, ioreg_name(addr));
         match addr {
             SB => self.sb = data,
             SC => {

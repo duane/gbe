@@ -1,3 +1,5 @@
+#![allow(clippy::manual_range_contains)]
+
 use gbc::instruction::{Instruction, InstructionError};
 
 fn main() {
